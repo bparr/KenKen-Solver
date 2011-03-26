@@ -5,8 +5,11 @@ from kenken import Puzzle, ConstraintLabel
 
 # Staring probability of unioning two constraint blocks
 startingUnionProb = .7
-# Probability of using + (instead of - or /) for 2 cells
-addTwoCellsProb = .2
+# Probability of using + or x (instead of - or /) for 2 cells
+addOrMultTwoCellsProb = .1
+# Probability of using - (instead of /) for 2 diviable cells (given not using +
+# or x)
+minusProb = .1
 # Probability of using x instead of + for more than 2 cells
 multProb = .5
 
@@ -82,8 +85,8 @@ for k, v in constraintMap.iteritems():
   if len(v) == 1:
     type = "!"
     num = v[0]
-  elif len(v) == 2 and random.random() > addTwoCellsProb:
-    if max(v[0], v[1]) % min(v[0], v[1]) == 0:
+  elif len(v) == 2 and random.random() > addOrMultTwoCellsProb:
+    if max(v[0], v[1]) % min(v[0], v[1]) == 0 and random.random() > minusProb:
       type = "/"
       num = max(v[0], v[1]) / min(v[0], v[1])
     else:
