@@ -245,38 +245,24 @@ int main(int argc, char **argv)
   return 0;
 }
 
+// Main recursive function used to solve the program 
+// Note: dangerous for large problem sizes because of the amount of
+//       stack space required.
 int solve(int step) {
   // Initialize
-  int i, minPossible = INT_MAX, numPossible = 0, index;
-  cell_t* minCell, *cell;
-  int newvalue;
+  int newvalue, nextCell;
+  cell_t* cell;
 
   // Find next cell to fill
-  for (i = 0; i < numCells; i++) {
-    cell = &(cells[i]);
-
-    // Skip assigned cells
-    if (cell->value != UNASSIGNED_VALUE)
-      continue;
-
-    if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
-      minPossible = numPossible;
-      minCell = cell;
-      index = i;
-    }
-  }
+  nextCell = findNextCell();
+  cell = &(cells[nextCell]);
 
   // If possible values exist
   if (minPossible > 0) {  
     // Get next possible value
-    newvalue = getNextPossible(&(minCell->possibles))
+    newvalue = getNextPossible(&(cell->possibles))
 
-    // Set cell
-    minCell->value = newvalue;
-
-    // Remove possibility from constraints and cell
-    removePossibiles(minCell, newvalue);
-
+    assignCell(cell, newvalue);
     // Store step information
 
     // Loop to next step
@@ -291,13 +277,49 @@ int solve(int step) {
   return 1;
 }
 
+// Finds the next cell to assign. Returns index of the cell
 int findNextCell() {
+  int i, minPossible = INT_MAX, numPossible = 0, index;
+  cell_t* minCell, *cell;
+
+  // Loop and check all unassigned cells
+  for (i = 0; i < numCells; i++) {
+    cell = &(cells[i]);
+
+    // Skip assigned cells
+    if (cell->value != UNASSIGNED_VALUE)
+      continue;
+
+    if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
+      minPossible = numPossible;
+      minCell = cell;
+      index = i;
+    }
+  }
+
+  return index;
 }
 
 void assignValue(cell_t* cell, int value) {
+  // Assign value
+  cell->value = value;
+
+  // Remove cell from constraints
+
+  // Remove possibility from constraints and cell
+  removePossibiles(cell, newvalue);
+
 }
 
 void unassignValue(cell_t* cell, int value) {
+  int i;
+
+  // Set value to unassigned
+  cell->value = UNASSIGNED_VALUE;
+
+  // Add cell back to its constraints
+  for (i = 0; i < CONSTRAINT_NUM; i++)
+    addCell(&(cell->constraints[i]), cell, value);
 }
 
 // Returns 1 if the value is valid for cells
