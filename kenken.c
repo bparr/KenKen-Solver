@@ -5,6 +5,7 @@
 
 #define MAX_POSSIBLE_PROBLEM 25
 #define POSSIBLE 3 // Value of possible such that it actually is possible
+#define IMPOSSIBLE -1
 #define UNASSIGNED_VALUE 0
 #define CONSTRAINT_NUM 3
 
@@ -70,6 +71,14 @@ int removePossible(possible_t* possible, int i);
 int getNumPossible(possible_t* possible);
 int getNextPossible(possible_t* possible);
 
+// TODO: fill in from Ben
+void initializeAddPossibles();
+void initializeMinusPossibles();
+void initializeDividePossibles();
+void initializeMultPossibles();
+void initializeLinePossibles();
+void initializeSinglePossibles();
+
 // Definitions for constraint_t functions
 int initializeConstraint(constraint_t* constraint, type_t type, int value);
 int addCell(constraint_t* constraint, cell_t* cell);
@@ -81,6 +90,14 @@ void initColConstraint(constraint_t* constraint, int col);
 
 // Declarations for cell_t functions
 void removePossibles(cell_t* cell, int newvalue);
+void addCell();
+void removeCell();
+
+// Algorithm functions
+int solve(int step);
+int findNextCell();
+void assignValue(cell_t* cell, int value);
+void unassignValue(cell_t* cell, int value);
 
 // Miscellaneous functions
 void usage(char* program);
@@ -222,84 +239,113 @@ int main(int argc, char **argv)
   // TODO: validation check to see if all cells are accounted for?
 
   // Run algorithm
+  solve(0);
 
   // Free data
   return 0;
 }
 
-int solve() {
+int solve(int step) {
   // Initialize
   int i, minPossible = INT_MAX, numPossible = 0, index;
   cell_t* minCell, *cell;
   int newvalue;
 
-  int step = 0;
+  // Find next cell to fill
+  for (i = 0; i < numCells; i++) {
+    cell = &(cells[i]);
 
-  while (step != DONE_STEP) {
+    // Skip assigned cells
+    if (cell->value != UNASSIGNED_VALUE)
+      continue;
 
-    // Find next cell to fill
-    for (i = 0; i < numCells; i++) {
-      cell = &(cells[i]);
-
-      // Skip assigned cells
-      if (cell->value != UNASSIGNED_VALUE)
-        continue;
-
-      if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
-        minPossible = numPossible;
-        minCell = cell;
-        index = i;
-      }
-    }
-
-    // If possible values exist
-    if (minPossible > 0) {  
-      // Get next possible value
-      newvalue = getNextPossible(&(minCell->possibles))
-
-      // Set cell
-      minCell->value = newvalue;
-
-      // Remove possibility from constraints and cell
-      removePossibiles(minCell, newvalue);
-
-      // Store step information
-
-      // Loop to next step
-    } else {
-      // Else
-      // Backtrack
-
-      // Set 
+    if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
+      minPossible = numPossible;
+      minCell = cell;
+      index = i;
     }
   }
 
+  // If possible values exist
+  if (minPossible > 0) {  
+    // Get next possible value
+    newvalue = getNextPossible(&(minCell->possibles))
+
+    // Set cell
+    minCell->value = newvalue;
+
+    // Remove possibility from constraints and cell
+    removePossibiles(minCell, newvalue);
+
+    // Store step information
+
+    // Loop to next step
+  } else {
+    // Else
+    // Backtrack
+
+    // Set 
+  }
+}
+
   return 1;
 }
 
-int isPossible(possible_t* possible, int i) {
-  return 1;
+int findNextCell() {
 }
 
-int addPossible(possible_t* possible, int i) {
-  return 1;
+void assignValue(cell_t* cell, int value) {
 }
 
+void unassignValue(cell_t* cell, int value) {
+}
+
+// Returns 1 if the value is valid for cells
+int cellIsPossible(possible_t* possible, int i) {
+  return (possible->flags[i] == POSSIBLE);
+}
+
+// Returns 1 if the value is valid for constraints.
+int constraintIsPossible(possible_t* possible, int i) {
+  return (possible->flags[i]);
+}
+
+// Increments a value in a possible regardless of state
+void addPossible(possible_t* possible, int i) {
+  if (possible->flags[i] != IMPOSSIBLE)
+    possible->flags[i]++;
+}
+
+// Decrements a value in a possible if it's not impossible
 int removePossible(possible_t* possible, int i) {
-  return 1;
+  if (possible->flags[i]) {
+    possible->flags[i]--;
+    return 1;
+  }
+  return 0;
 }
 
+// Marks a particular value as impossible
+void markImpossible(possible_t* possible, int i) {
+  possible->flags[i] = IMPOSSIBLE;
+}
+
+// Returns the number of possible values in a possible_t
 int getNumPossible(possible_t* possible) {
   return possible->num;
 }
 
 // Initializes a row constraint for the given row
-void initRowConstraint(constraint_t* constraint, int row) {
-  
+void initRowConstraint(constraint_t* constraint, int row) { 
 }
 
 // Initializes a column constraint for the given column
 void initColConstraint(constraint_t* constraint, int col) {
+}
+
+// Removes a possible value from the constraint
+int removeConstraintsPossible(constraint_t* constraint, int value) {
+  return removePossible(&constraint->possibles, value);
 }
 
 // Removes possibilities from the cell's constraints and its own possibles
@@ -309,13 +355,13 @@ void removePossibles(cell_t* cell, int newvalue) {
   for (i = 0; i < CONSTRAINTS_NUM; i++) {
     // If constraint has the possibility, remove + decrement from cell
     if (removeConstraintsPossible(cell->constraints[i], newvalue))
-      removePossible(&(cell->possibles), newvalue);
+      removePossible(&cell->possibles, newvalue);
   }
 }
 
 // Restores possibles from the cell's constraints and its own possibles
 void restorePossibles(cell_t* cell, int newvalue) {
-  int i;
+  // TODO unimplemented
 }
 
 // Print usage information and exit
