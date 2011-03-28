@@ -5,7 +5,7 @@
 
 #define MAX_POSSIBLE_PROBLEM 25
 #define POSSIBLE 3 // Value of possible such that it actually is possible
-#define IMPOSSIBLE -1
+#define NOT_POSSIBLE -1
 #define UNASSIGNED_VALUE 0
 #define CONSTRAINT_NUM 3
 
@@ -335,7 +335,7 @@ int constraintIsPossible(possible_t* possible, int i) {
 
 // Increments a value in a possible regardless of state
 void addPossible(possible_t* possible, int i) {
-  if (possible->flags[i] != IMPOSSIBLE)
+  if (possible->flags[i] != NOT_POSSIBLE)
     possible->flags[i]++;
 }
 
@@ -350,7 +350,7 @@ int removePossible(possible_t* possible, int i) {
 
 // Marks a particular value as impossible
 void markImpossible(possible_t* possible, int i) {
-  possible->flags[i] = IMPOSSIBLE;
+  possible->flags[i] = NOT_POSSIBLE;
 }
 
 // Returns the number of possible values in a possible_t
@@ -389,12 +389,32 @@ void restorePossibles(cell_t* cell, int value) {
 
 // Adds a cell to a constraint
 void addCell(constraint_t* constraint, cell_t* cell, int value) {
+  int oldValue = constraint->value;
+
+  constraint->numCells++;
+
+  switch (constraint->type) {
+    case PLUS:
+      constraint->value += value;
+      break;
+    case PARTIAL_MINUS:
+      // TODO: Partial minus converge
+      break;
+    case MULT:
+      constraint->value *= value;
+      break;
+    case PARTIAL_DIV:
+      // TODO: Partial divide converge
+      break;
+    default:
+      break;
+  }
+
+  // TODO: Ben's compute Possibilities
 }
 
 // Removes a cell from a constraint
 void removeCell(constraint_t* constraint, cell_t* cell, int value) {
-  int oldValue = constraint->value;
-
   constraint->numCells--;
 
   switch (constraint->type) {
