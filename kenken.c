@@ -89,9 +89,10 @@ void initRowConstraint(constraint_t* constraint, int row);
 void initColConstraint(constraint_t* constraint, int col);
 
 // Declarations for cell_t functions
-void removePossibles(cell_t* cell, int newvalue);
-void addCell();
-void removeCell();
+void removePossibles(cell_t* cell, int value);
+void restorePossibles(cell_t* cell, int value);
+void addCell(constraint_t* constraint, cell_t* cell, int value);
+void removeCell(constraint_t* constraint, cell_t* cell, int value);
 
 // Algorithm functions
 int solve(int step);
@@ -371,19 +372,53 @@ int removeConstraintsPossible(constraint_t* constraint, int value) {
 }
 
 // Removes possibilities from the cell's constraints and its own possibles
-void removePossibles(cell_t* cell, int newvalue) {
+void removePossibles(cell_t* cell, int value) {
   int i;
 
   for (i = 0; i < CONSTRAINTS_NUM; i++) {
     // If constraint has the possibility, remove + decrement from cell
-    if (removeConstraintsPossible(cell->constraints[i], newvalue))
-      removePossible(&cell->possibles, newvalue);
+    if (removeConstraintsPossible(cell->constraints[i], value))
+      removePossible(&cell->possibles, value);
   }
 }
 
 // Restores possibles from the cell's constraints and its own possibles
-void restorePossibles(cell_t* cell, int newvalue) {
+void restorePossibles(cell_t* cell, int value) {
   // TODO unimplemented
+}
+
+// Adds a cell to a constraint
+void addCell(constraint_t* constraint, cell_t* cell, int value) {
+}
+
+// Removes a cell from a constraint
+void removeCell(constraint_t* constraint, cell_t* cell, int value) {
+  int oldValue = constraint->value;
+
+  constraint->numCells--;
+
+  switch (constraint->type) {
+    case PLUS:
+      constraint->value -= value;
+      break;
+    case MINUS:
+      constraint->type = PARTIAL_MINUS
+      // TODO: minus case
+      break;
+    case MULT:
+      constraint->value /= value;
+      break;
+    case DIVID:
+      constraint->type = PARTIAL_DIV;
+      // TODO: div case
+      break;
+    case SINGLE:
+      break;
+    default:
+      break;
+  }
+
+  // TODO: Ben updates constraint's possible values
 }
 
 // Print usage information and exit
