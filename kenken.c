@@ -269,12 +269,16 @@ int solve(int step) {
     cell = &(cells[nextCell]);
     
     // Get next possible value
-    newvalue = getNextPossible(&(cell->possibles));
+    while ((newvalue = getNextPossible(&(cell->possibles))) > 0) {
+      assignValue(cell, newvalue);
+      // Store step information
 
-    assignValue(cell, newvalue);
-    // Store step information
+      // Loop to next step
+      if (solve(step + 1))
+        return 1;
 
-    // Loop to next step
+      unassignValue(cell, newvalue);
+    }
 
   } else {
     // Else
