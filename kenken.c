@@ -10,6 +10,10 @@
 
 #define MAX_LINE_LEN 512
 
+#define ROW 0
+#define COLUMN 1
+#define BLOCK 2
+
 // Get index into a 2d array initialized as a 1d array
 #define GET_INDEX(x, y, size) ((size) * (x) + (y))
 
@@ -25,7 +29,7 @@ typedef enum {
 } type_t;
 
 typedef struct possible {
-  char flags[MAX_POSSIBLE_PROBLEM];
+  char flags[MAX_POSSIBLE_PROBLEM + 1];
   int num;
 } possible_t;
 
@@ -43,7 +47,7 @@ typedef struct constraint {
 typedef struct cell {
   int value;
   possible_t possibles;
-  struct constraint constraints[CONSTRAINT_NUM];
+  struct constraint* constraints[CONSTRAINT_NUM];
 } cell_t;
 
 typedef struct cellnode {
@@ -52,16 +56,19 @@ typedef struct cellnode {
   cell_t* next;
 }
 
+/** TODO: incorporate for optimizing finding the next possible?
 typedef struct step {
   cell_t* modifiedCell;
   int lastIndex;
 } step_t;
+*/
 
 // Definitions for possible_t functions
 int isPossible(possible_t* possible, int i);
 int addPossible(possible_t* possible, int i);
 int removePossible(possible_t* possible, int i);
 int getNumPossible(possible_t* possible);
+int getNextPossible(possible_t* possible);
 
 // Definitions for constraint_t functions
 int initializeConstraint(constraint_t* constraint, type_t type, int value);
@@ -71,6 +78,9 @@ int markImpossible(constraint_t* constraint, int value);
 
 void initRowConstraint(constraint_t* constraint, int row);
 void initColConstraint(constraint_t* constraint, int col);
+
+// Declarations for cell_t functions
+void removePossibles(cell_t* cell, int newvalue);
 
 // Miscellaneous functions
 void usage(char* program);
@@ -85,8 +95,8 @@ int numCells;
 cell_t* cells;
 // Number of constraints
 int numConstraints;
-// Steps array
-step_t* steps;
+// Steps array: stores indices to the cell that was modified
+int* steps;
 
 int main(int argc, char **argv)
 {
@@ -108,6 +118,9 @@ int main(int argc, char **argv)
     unixError("Failed to open input file");
     exit(1);
   }
+
+  // TODO: Consider using the maximum sizes for all initialization to be
+  //       consistent throughout the code
 
   // Read in problem size
   readLine(in, lineBuf);
@@ -196,11 +209,14 @@ int main(int argc, char **argv)
       // Update cells count
       constraint->numCells++;
 
+      // add constraint to cell
+      newnode->cell.constraints[BLOCK] = constraint;
+
       ptr = strtok(NULL, " ");
     }
 
     // Adjust possible list for constraint
-    updateCagePossibles(constraint);
+    updateBlockPossibles(constraint);
   }
 
   // TODO: validation check to see if all cells are accounted for?
@@ -213,33 +229,52 @@ int main(int argc, char **argv)
 
 int solve() {
   // Initialize
-  int i, minPossible = INT_MAX, numPossible = 0;
+  int i, minPossible = INT_MAX, numPossible = 0, index;
   cell_t* minCell, *cell;
+  int newvalue;
 
-  // Find next cell to fill
-  for (i = 0; i < numCells; i++) {
-    cell = &(cells[i]);
+  int step = 0;
 
-    if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
-      minPossible = numPossible;
-      minCell = cell;
+  while (step != DONE_STEP) {
+
+    // Find next cell to fill
+    for (i = 0; i < numCells; i++) {
+      cell = &(cells[i]);
+
+      // Skip assigned cells
+      if (cell->value != UNASSIGNED_VALUE)
+        continue;
+
+      if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
+        minPossible = numPossible;
+        minCell = cell;
+        index = i;
+      }
+    }
+
+    // If possible values exist
+    if (minPossible > 0) {  
+      // Get next possible value
+      newvalue = getNextPossible(&(minCell->possibles))
+
+      // Set cell
+      minCell->value = newvalue;
+
+      // Remove possibility from constraints and cell
+      removePossibiles(minCell, newvalue);
+
+      // Store step information
+
+      // Loop to next step
+    } else {
+      // Else
+      // Backtrack
+
+      // Set 
     }
   }
 
-  // If possible values exist
-  if (minPossible > 0) {
-    
-    // Set cell
-
-    // Store step information
-
-    // Loop to next step
-  } else {
-    // Else
-    // Backtrack
-    
-    // Set 
-  }
+  return 1;
 }
 
 int isPossible(possible_t* possible, int i) {
@@ -258,11 +293,29 @@ int getNumPossible(possible_t* possible) {
   return possible->num;
 }
 
+// Initializes a row constraint for the given row
 void initRowConstraint(constraint_t* constraint, int row) {
   
 }
 
+// Initializes a column constraint for the given column
 void initColConstraint(constraint_t* constraint, int col) {
+}
+
+// Removes possibilities from the cell's constraints and its own possibles
+void removePossibles(cell_t* cell, int newvalue) {
+  int i;
+
+  for (i = 0; i < CONSTRAINTS_NUM; i++) {
+    // If constraint has the possibility, remove + decrement from cell
+    if (removeConstraintsPossible(cell->constraints[i], newvalue))
+      removePossible(&(cell->possibles), newvalue);
+  }
+}
+
+// Restores possibles from the cell's constraints and its own possibles
+void restorePossibles(cell_t* cell, int newvalue) {
+  int i;
 }
 
 // Print usage information and exit
