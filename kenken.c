@@ -56,7 +56,6 @@ typedef struct cell {
 
 // Definitions for possible_t functions
 void initializeLinePossibles(possible_t* possible);
-int getNextPossible(possible_t* possible, int last);
 
 // TODO: fill in from Ben
 void initializePlusPossibles();
@@ -67,8 +66,6 @@ void initializeLinePossibles();
 void initializeSinglePossibles();
 
 // Definitions for constraint_t functions
-int initializeConstraint(constraint_t* constraint, type_t type, int value);
-
 void initRowConstraint(constraint_t* constraint, int row);
 void initColConstraint(constraint_t* constraint, int col);
 
@@ -83,8 +80,8 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value);
 // Miscellaneous functions
 void usage(char* program);
 void readLine(FILE* in, char* lineBuf);
-void unixError(const char* str);
 void appError(const char* str);
+void unixError(const char* str);
 
 // Problem size
 int problemSize;
@@ -96,8 +93,6 @@ cell_t* cells;
 int numConstraints;
 // Constraints array
 constraint_t* constraints;
-// Steps array: stores indices to the cell that was modified
-int* steps;
 
 int main(int argc, char **argv)
 {
@@ -248,9 +243,9 @@ int solve(int step) {
         continue;
 
       assignValue(cell, newValue);
-        // Loop to next step
-        if (solve(step + 1))
-          return 1;
+      // Loop to next step
+      if (solve(step + 1))
+        return 1;
       unassignValue(cell, newValue);
 
       // Restore step information
@@ -274,7 +269,8 @@ int findNextCell() {
 
   // Loop and check all unassigned cells
   for (i = 0; i < numCells; i++) {
-    if (minPossible == 0) break;
+    if (minPossible == 0) 
+      break;
     
     cell = &(cells[i]);
 
@@ -293,6 +289,7 @@ int findNextCell() {
   return index;
 }
 
+// Assigns a value to a cell
 void assignValue(cell_t* cell, int value) {
   int i, ret = 1;
 
@@ -304,6 +301,7 @@ void assignValue(cell_t* cell, int value) {
     removeCell(cell->constraints[i], cell, value);
 }
 
+// Unassigns a value to a cell
 void unassignValue(cell_t* cell, int value) {
   int i;
 
@@ -313,53 +311,6 @@ void unassignValue(cell_t* cell, int value) {
   // Add cell back to its constraints
   for (i = 0; i < CONSTRAINT_NUM; i++)
     addCell(cell->constraints[i], cell, value);
-}
-
-void initializeLinePossibles(possible_t* possible) {
-  int i;
-  possible->num = problemSize;
-  for (i = 1; i <= problemSize; i++)
-    possible->flags[i] = POSSIBLE;
-}
-
-// Initializes a row constraint for the given row
-void initRowConstraint(constraint_t* constraint, int row) {
-  int i;
-  cell_t* cell;
-  
-  constraint->type = LINE;
-  constraint->value = -1;
-  constraint->numCells = 0;
-
-  initializeLinePossibles(&constraint->possibles);
-  for (i = 0; i < problemSize; i++) {
-    // Increment number of cells
-    constraint->numCells++;
-
-    // Add row constraint to cell
-    cell = &cells[GET_INDEX(row, i, problemSize)];
-    cells->constraints[ROW_CONSTRAINT_INDEX] = constraint;
-  }
-}
-
-// Initializes a column constraint for the given column
-void initColConstraint(constraint_t* constraint, int col) {
-  int i;
-  cell_t* cell;
-
-  constraint->type = LINE;
-  constraint->value = -1;
-  constraint->numCells = 0;
-
-  initializeLinePossibles(&constraint->possibles);
-  for (i = 0; i < problemSize; i++) {
-    // Increment number of cells
-    constraint->numCells++;
-
-    // Add col constraint to cell
-    cell = &cells[GET_INDEX(i, col, problemSize)];
-    cell->constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
-  }
 }
 
 // Adds a cell to a constraint
@@ -416,6 +367,54 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
 
 
   // TODO: Ben updates constraint's possible values
+}
+
+// Initializes the possible values for a line
+void initializeLinePossibles(possible_t* possible) {
+  int i;
+  possible->num = problemSize;
+  for (i = 1; i <= problemSize; i++)
+    possible->flags[i] = POSSIBLE;
+}
+
+// Initializes a row constraint for the given row
+void initRowConstraint(constraint_t* constraint, int row) {
+  int i;
+  cell_t* cell;
+  
+  constraint->type = LINE;
+  constraint->value = -1;
+  constraint->numCells = 0;
+
+  initializeLinePossibles(&constraint->possibles);
+  for (i = 0; i < problemSize; i++) {
+    // Increment number of cells
+    constraint->numCells++;
+
+    // Add row constraint to cell
+    cell = &cells[GET_INDEX(row, i, problemSize)];
+    cells->constraints[ROW_CONSTRAINT_INDEX] = constraint;
+  }
+}
+
+// Initializes a column constraint for the given column
+void initColConstraint(constraint_t* constraint, int col) {
+  int i;
+  cell_t* cell;
+
+  constraint->type = LINE;
+  constraint->value = -1;
+  constraint->numCells = 0;
+
+  initializeLinePossibles(&constraint->possibles);
+  for (i = 0; i < problemSize; i++) {
+    // Increment number of cells
+    constraint->numCells++;
+
+    // Add col constraint to cell
+    cell = &cells[GET_INDEX(i, col, problemSize)];
+    cell->constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
+  }
 }
 
 // Print usage information and exit
