@@ -11,39 +11,33 @@
 #include <limits.h>
 #include <unistd.h>
 
-#define MAX_POSSIBLE_PROBLEM 25 // TODO rename to MAX_PROBLEM_SIZE
+#define MAX_PROBLEM_SIZE 25 
 #define POSSIBLE 3 // Value of possible such that it actually is possible
-#define NOT_POSSIBLE -1 // TODO remove (unused)
 #define UNASSIGNED_VALUE 0
 #define CONSTRAINT_NUM 3
 
 #define MAX_LINE_LEN 2048
 
-// TODO better names? e.g. ROW_CONSTRAINT_INDEX
-#define ROW 0
-#define COLUMN 1
-#define BLOCK 2
+#define ROW_CONSTRAINT_INDEX 0
+#define COLUMN_CONSTRAINT_INDEX 1
+#define BLOCK_CONSTRAINT_INDEX 2
 
 // Get index into a 2d array initialized as a 1d array
 #define GET_INDEX(x, y, size) ((size) * (x) + (y))
-
-// TODO get rid of (mad hacky)?
-// Get index into a 2d array given addresses
-#define GET_ARRAY_INDEX(head, elem, elemSize) (((elem) - (head))/(elemSize))
 
 typedef enum {
   LINE,
   PLUS,
   MINUS,
   PARTIAL_MINUS,
-  MULT, // TODO change name to MULTIPLY
-  DIVID, // TODO change name to DIVIDE
-  PARTIAL_DIV, // TODO change name to PARTIAL_DIVIDE
+  MULTIPLY,
+  DIVIDE,
+  PARTIAL_DIVIDE, 
   SINGLE // TODO remove?? SINGLE should be a degenerate case of PLUS
 } type_t;
 
 typedef struct possible {
-  char flags[MAX_POSSIBLE_PROBLEM + 1];
+  char flags[MAX_PROBLEM_SIZE + 1];
   int num;
 } possible_t;
 
@@ -51,7 +45,6 @@ typedef struct constraint {
   type_t type;
   long value;
   possible_t possibles;
-  char flags[MAX_POSSIBLE_PROBLEM*MAX_POSSIBLE_PROBLEM]; // TODO remove
   int numCells;
 } constraint_t;
 
@@ -62,9 +55,7 @@ typedef struct cell {
 } cell_t;
 
 // Definitions for possible_t functions
-void initLinePossible(possible_t* possible); // TODO make initializeLinePossibles
-int cellIsPossible(possible_t* possible, int i); // TODO remove
-int getNumPossible(possible_t* possible); // TODO remove
+void initializeLinePossibles(possible_t* possible);
 int getNextPossible(possible_t* possible, int last);
 
 // TODO: fill in from Ben
@@ -84,15 +75,16 @@ void initColConstraint(constraint_t* constraint, int col);
 // Algorithm functions
 int solve(int step);
 int findNextCell();
-int assignValue(cell_t* cell, int value);
+void assignValue(cell_t* cell, int value);
 void unassignValue(cell_t* cell, int value);
 void addCell(constraint_t* constraint, cell_t* cell, int value);
-int removeCell(constraint_t* constraint, cell_t* cell, int value);
+void removeCell(constraint_t* constraint, cell_t* cell, int value);
 
 // Miscellaneous functions
 void usage(char* program);
 void readLine(FILE* in, char* lineBuf);
 void unixError(const char* str);
+void appError(const char* str);
 
 // Problem size
 int problemSize;
@@ -116,6 +108,7 @@ int main(int argc, char **argv)
   char* ptr;
   int x, y, i;
   constraint_t* constraint;
+  cell_t* cell;
 
   // Check arguments
   if (argc != 2)
@@ -180,18 +173,16 @@ int main(int argc, char **argv)
         constraint->type = MINUS;
         break;
       case 'x':
-        constraint->type = MULT;
+        constraint->type = MULTIPLY;
         break;
       case '/':
-        constraint->type = DIVID;
+        constraint->type = DIVIDE;
         break;
       case '!':
         constraint->type = SINGLE;
         break;
       default:
-        // TODO: error! i.e. appError
-        constraint->type = SINGLE;
-        break;
+        appError("Malformed constraint in input file");
     }
 
     // Read in value
@@ -206,14 +197,12 @@ int main(int argc, char **argv)
       ptr = strtok(NULL, ", "); // x-value
       y = atoi(ptr);
 
-      // Mark as present
-      constraint->flags[GET_INDEX(x, y, MAX_POSSIBLE_PROBLEM)] = 1;
-
       // Update cells count
       constraint->numCells++;
 
       // Add block constraint to cell
-      cells[GET_INDEX(x, y, problemSize)].constraints[BLOCK] = constraint;
+      cell = &cells[GET_INDEX(x, y, problemSize)];
+      cell->constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
       
       // Iterate again
       ptr = strtok(NULL, ", ");
@@ -221,7 +210,7 @@ int main(int argc, char **argv)
 
     // Adjust possible list for constraint
     // TODO: fix for block constraints
-    initLinePossible(&constraint->possibles);
+    initializeLinePossibles(&constraint->possibles);
   }
 
   // TODO: validation check to see if all cells are accounted for?
@@ -243,7 +232,7 @@ int main(int argc, char **argv)
 //       stack space required.
 int solve(int step) {
   // Initialize
-  int newvalue, nextCell, lastvalue = 0, possibleSet;
+  int newValue, nextCell, possibleSet;
   cell_t* cell;
   
   // Find next cell to fill
@@ -251,22 +240,21 @@ int solve(int step) {
   cell = &(cells[nextCell]);
   
   // If possible values exist
-  if (getNumPossible(&cell->possibles) > 0) {
+  if (cell->possibles.num > 0) {
     // Get next possible value
-    possible_t oldpossible = cell->possibles;
-    // TODO merge getNextPossible into this function? would make way simpler
-    while ((newvalue = getNextPossible(&cell->possibles, lastvalue)) > 0) {
-      // Store step information
-      lastvalue = newvalue;
+    possible_t oldPossible = cell->possibles;
+    for (newValue = 1; newValue <= problemSize; newValue++) {
+      if (oldPossible.flags[newValue] == POSSIBLE)
+        continue;
 
-      if (assignValue(cell, newvalue))
+      assignValue(cell, newValue);
         // Loop to next step
         if (solve(step + 1))
           return 1;
-      unassignValue(cell, newvalue);
+      unassignValue(cell, newValue);
 
       // Restore step information
-      cell->possibles = oldpossible;
+      cell->possibles = oldPossible;
     }
 
   } 
@@ -294,7 +282,7 @@ int findNextCell() {
     if (cell->value != UNASSIGNED_VALUE)
       continue;
 
-    if ((numPossible = getNumPossible(&cell->possibles)) < minPossible) {
+    if ((numPossible = cell->possibles.num) < minPossible) {
       minPossible = numPossible;
       minCell = cell;
       index = i;
@@ -305,7 +293,7 @@ int findNextCell() {
   return index;
 }
 
-int assignValue(cell_t* cell, int value) {
+void assignValue(cell_t* cell, int value) {
   int i, ret = 1;
 
   // Assign value
@@ -313,9 +301,7 @@ int assignValue(cell_t* cell, int value) {
 
   // Remove cell from constraints
   for (i = 0; i < CONSTRAINT_NUM; i++)
-    ret &= removeCell(cell->constraints[i], cell, value);
-
-  return ret;
+    removeCell(cell->constraints[i], cell, value);
 }
 
 void unassignValue(cell_t* cell, int value) {
@@ -329,69 +315,50 @@ void unassignValue(cell_t* cell, int value) {
     addCell(cell->constraints[i], cell, value);
 }
 
-void initLinePossible(possible_t* possible) {
+void initializeLinePossibles(possible_t* possible) {
   int i;
   possible->num = problemSize;
   for (i = 1; i <= problemSize; i++)
     possible->flags[i] = POSSIBLE;
 }
 
-// Returns 1 if the value is valid for cells
-int cellIsPossible(possible_t* possible, int i) {
-  return (possible->flags[i] == POSSIBLE);
-}
-
-// Returns the number of possible values in a possible_t
-int getNumPossible(possible_t* possible) {
-  return possible->num;
-}
-
-// Gets the next possible new value
-int getNextPossible(possible_t* possible, int last) {
-  int i;
-
-  for (i = last + 1; i < MAX_POSSIBLE_PROBLEM + 1; i++)
-    if (cellIsPossible(possible, i))
-      return i;
-
-  return -1;
-}
-
 // Initializes a row constraint for the given row
 void initRowConstraint(constraint_t* constraint, int row) {
   int i;
+  cell_t* cell;
   
   constraint->type = LINE;
   constraint->value = -1;
   constraint->numCells = 0;
 
-  initLinePossible(&constraint->possibles);
+  initializeLinePossibles(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
-    // Mark as present
-    constraint->flags[GET_INDEX(row, i, MAX_POSSIBLE_PROBLEM)] = 1;
+    // Increment number of cells
     constraint->numCells++;
 
     // Add row constraint to cell
-    cells[GET_INDEX(row, i, problemSize)].constraints[ROW] = constraint;
+    cell = &cells[GET_INDEX(row, i, problemSize)];
+    cells->constraints[ROW_CONSTRAINT_INDEX] = constraint;
   }
 }
 
 // Initializes a column constraint for the given column
 void initColConstraint(constraint_t* constraint, int col) {
   int i;
+  cell_t* cell;
 
   constraint->type = LINE;
   constraint->value = -1;
   constraint->numCells = 0;
 
-  initLinePossible(&constraint->possibles);
+  initializeLinePossibles(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
-    // Mark as present
-    constraint->flags[GET_INDEX(i, col, MAX_POSSIBLE_PROBLEM)] = 1;
+    // Increment number of cells
     constraint->numCells++;
 
     // Add col constraint to cell
-    cells[GET_INDEX(i, col, problemSize)].constraints[COLUMN] = constraint;
+    cell = &cells[GET_INDEX(i, col, problemSize)];
+    cell->constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
   }
 }
 
@@ -400,8 +367,6 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
   int oldValue = constraint->value;
 
   // Add cell to constraint
-  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
-  constraint->flags[index] = 1;
   constraint->numCells++;
 
   switch (constraint->type) {
@@ -411,10 +376,10 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
     case PARTIAL_MINUS:
       // TODO: Partial minus converge
       break;
-    case MULT:
+    case MULTIPLY:
       constraint->value *= value;
       break;
-    case PARTIAL_DIV:
+    case PARTIAL_DIVIDE:
       // TODO: Partial divide converge
       break;
     default:
@@ -425,10 +390,8 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
 }
 
 // Removes a cell from a constraint
-int removeCell(constraint_t* constraint, cell_t* cell, int value) {
+void removeCell(constraint_t* constraint, cell_t* cell, int value) {
   // Remove cell from constraint
-  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
-  constraint->flags[index] = 0;
   constraint->numCells--;
 
   switch (constraint->type) {
@@ -438,11 +401,11 @@ int removeCell(constraint_t* constraint, cell_t* cell, int value) {
     case MINUS:
       constraint->type = PARTIAL_MINUS;
       break;
-    case MULT:
+    case MULTIPLY:
       constraint->value /= value;
       break;
-    case DIVID:
-      constraint->type = PARTIAL_DIV;
+    case DIVIDE:
+      constraint->type = PARTIAL_DIVIDE;
       // TODO: div case
       break;
     case SINGLE:
@@ -452,19 +415,7 @@ int removeCell(constraint_t* constraint, cell_t* cell, int value) {
   }
 
 
-  // TODO remove block, then remove unused return values
-  if (constraint->numCells == 0) {
-    if (constraint->type != LINE) {
-      // Check if value = 0
-      if (constraint->value != 0) {
-        // Failure
-        return 0;
-      }
-    }
-  }
-
   // TODO: Ben updates constraint's possible values
-  return 1;
 }
 
 // Print usage information and exit
@@ -476,6 +427,11 @@ void usage(char* program) {
 void readLine(FILE* in, char* lineBuf) {
   if (!fgets(lineBuf, MAX_LINE_LEN, in))
     unixError("Failed to read line from input file");
+}
+
+void appError(const char* str) {
+  fprintf(stderr, "%s\n", str);
+  exit(1);
 }
 
 // Display a unix error and exit
