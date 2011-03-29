@@ -81,10 +81,10 @@ void initColConstraint(constraint_t* constraint, int col);
 // Algorithm functions
 int solve(int step);
 int findNextCell();
-void assignValue(cell_t* cell, int value);
+int assignValue(cell_t* cell, int value);
 void unassignValue(cell_t* cell, int value);
 void addCell(constraint_t* constraint, cell_t* cell, int value);
-void removeCell(constraint_t* constraint, cell_t* cell, int value);
+int removeCell(constraint_t* constraint, cell_t* cell, int value);
 
 // Miscellaneous functions
 void usage(char* program);
@@ -253,10 +253,10 @@ int solve(int step) {
       // Store step information
       lastvalue = newvalue;
 
-      assignValue(cell, newvalue);
-      // Loop to next step
-      if (solve(step + 1))
-        return 1;
+      if (assignValue(cell, newvalue))
+        // Loop to next step
+        if (solve(step + 1))
+          return 1;
       unassignValue(cell, newvalue);
 
       // Restore step information
@@ -299,15 +299,17 @@ int findNextCell() {
   return index;
 }
 
-void assignValue(cell_t* cell, int value) {
-  int i;
+int assignValue(cell_t* cell, int value) {
+  int i, ret = 1;
 
   // Assign value
   cell->value = value;
 
   // Remove cell from constraints
   for (i = 0; i < CONSTRAINT_NUM; i++)
-    removeCell(cell->constraints[i], cell, value);
+    ret &= removeCell(cell->constraints[i], cell, value);
+
+  return ret;
 }
 
 void unassignValue(cell_t* cell, int value) {
@@ -419,7 +421,7 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
 }
 
 // Removes a cell from a constraint
-void removeCell(constraint_t* constraint, cell_t* cell, int value) {
+int removeCell(constraint_t* constraint, cell_t* cell, int value) {
   constraint->numCells--;
 
   switch (constraint->type) {
@@ -449,14 +451,14 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
 
   if (constraint->numCells == 0) {
     // Check if value = 0
-    if (constraint->value == 0) {
-      // Success
-    } else {
+    if (constraint->value != 0) {
       // Failure
+      return 0;
     }
   }
 
   // TODO: Ben updates constraint's possible values
+  return 1;
 }
 
 // Print usage information and exit
