@@ -15,7 +15,7 @@
 #define UNASSIGNED_VALUE 0
 #define CONSTRAINT_NUM 3
 
-#define MAX_LINE_LEN 512
+#define MAX_LINE_LEN 2048
 
 #define ROW 0
 #define COLUMN 1
@@ -258,20 +258,21 @@ int main(int argc, char **argv)
 //       stack space required.
 int solve(int step) {
   // Initialize
-  int newvalue, nextCell;
+  int newvalue, nextCell, lastvalue = 1, possibleSet;
   cell_t* cell;
-
+  
   // Find next cell to fill
   nextCell = findNextCell();
+  cell = &(cells[nextCell]);
   
   // If possible values exist
-  if (nextCell >= 0) {
-    cell = &(cells[nextCell]);
-    
+  if (getNumPossible(&cell->possibles) > 0) {
     // Get next possible value
-    while ((newvalue = getNextPossible(&(cell->possibles))) > 0) {
+    while ((newvalue = getNextPossible(&cell->possibles, lastvalue)) > 0) {
       assignValue(cell, newvalue);
+      
       // Store step information
+      lastvalue = newvalue;
 
       // Loop to next step
       if (solve(step + 1))
@@ -280,23 +281,25 @@ int solve(int step) {
       unassignValue(cell, newvalue);
     }
 
-  } else {
-    // Else
-    // Backtrack
-
-    // Set 
-  }
-
-  return 1;
+  } 
+  
+  // No possibilities remain
+  return 0;
 }
 
-// Finds the next cell to assign. Returns index of the cell
+/** @brief Finds the next cell to assign. Returns index of the cell
+ *
+ *  @return index of next cell
+ *  @return -1 if there exists a cell that can't be filled
+ */
 int findNextCell() {
   int i, minPossible = INT_MAX, numPossible = 0, index;
   cell_t* minCell, *cell;
 
   // Loop and check all unassigned cells
   for (i = 0; i < numCells; i++) {
+    if (minPossible == 0) break;
+    
     cell = &(cells[i]);
 
     // Skip assigned cells
@@ -310,18 +313,19 @@ int findNextCell() {
     }
   }
 
-  return (minPossible == 0) ? -1 : index;
+  // If minPossible == 0, there exists a cell that can't be filled
+  return index;
 }
 
 void assignValue(cell_t* cell, int value) {
+  int i;
+
   // Assign value
   cell->value = value;
 
   // Remove cell from constraints
-
-  // Remove possibility from constraints and cell
-  removePossibles(cell, value);
-
+  for (i = 0; i < CONSTRAINTS_NUM; i++)
+    removeCell(cell->constraints[i], cell, value);
 }
 
 void unassignValue(cell_t* cell, int value) {
