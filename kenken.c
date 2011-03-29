@@ -41,14 +41,12 @@ typedef struct possible {
 } possible_t;
 
 // TODO: need head/tail pointers (right now just a head ptr)
-// Can switch cellnode_t* cells to point to a struct holding head/tail pointers
 typedef struct constraint {
   type_t type;
   long value;
   possible_t possibles;
   char flags[MAX_POSSIBLE_PROBLEM*MAX_POSSIBLE_PROBLEM];
   int numCells;
-  struct cellnode* cells;
 } constraint_t;
 
 typedef struct cell {
@@ -56,12 +54,6 @@ typedef struct cell {
   possible_t possibles;
   struct constraint* constraints[CONSTRAINT_NUM];
 } cell_t;
-
-typedef struct cellnode {
-  cell_t* cell;
-  struct cellnode* prev;
-  struct cellnode* next;
-} cellnode_t;
 
 /** TODO: incorporate for optimizing finding the next possible?
 typedef struct step {
@@ -89,9 +81,6 @@ int initializeConstraint(constraint_t* constraint, type_t type, int value);
 
 void initRowConstraint(constraint_t* constraint, int row);
 void initColConstraint(constraint_t* constraint, int col);
-
-// Declarations for cell_t functions
-int cellnode_insert(cellnode_t** head, cellnode_t* newnode);
 
 // Algorithm functions
 int solve(int step);
@@ -128,7 +117,6 @@ int main(int argc, char **argv)
   char* ptr, *coordinate;
   int x, y, i;
   constraint_t* constraint;
-  cellnode_t* newnode;
 
   // Check arguments
   if (argc != 0)
@@ -223,11 +211,6 @@ int main(int argc, char **argv)
       constraint->flags[GET_INDEX(x, y, MAX_POSSIBLE_PROBLEM)] = 1;
 
       // Add cell to cells list
-      newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
-      newnode->cell = &(cells[GET_INDEX(x, y, problemSize)]);
-      newnode->prev = NULL;
-      newnode->next = NULL;
-      cellnode_insert(&constraint->cells, newnode);
       
       // Update cells count
       constraint->numCells++;
@@ -374,20 +357,13 @@ int getNextPossible(possible_t* possible, int last) {
 // Initializes a row constraint for the given row
 void initRowConstraint(constraint_t* constraint, int row) {
   int i;
-  cellnode_t* newnode;
-
+  
   constraint->type = LINE;
   constraint->value = -1;
   constraint->numCells = 0;
 
   initLinePossible(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
-    newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
-    newnode->cell = &cells[GET_INDEX(row, i, MAX_POSSIBLE_PROBLEM)];
-    newnode->prev = NULL;
-    newnode->next = NULL;
-
-    cellnode_insert(&constraint->cells, newnode);
     constraint->numCells++;
   }
 }
@@ -395,7 +371,6 @@ void initRowConstraint(constraint_t* constraint, int row) {
 // Initializes a column constraint for the given column
 void initColConstraint(constraint_t* constraint, int col) {
   int i;
-  cellnode_t* newnode;
 
   constraint->type = LINE;
   constraint->value = -1;
@@ -403,27 +378,8 @@ void initColConstraint(constraint_t* constraint, int col) {
 
   initLinePossible(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
-    newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
-    newnode->cell = &cells[GET_INDEX(i, col, MAX_POSSIBLE_PROBLEM)];
-    newnode->prev = NULL;
-    newnode->next = NULL;
-
-    cellnode_insert(&constraint->cells, newnode);
     constraint->numCells++;
   }
-}
-
-// Inserts a node at the front of the cellnode list
-int cellnode_insert(cellnode_t** head, cellnode_t* newnode) {
-  cellnode_t* oldhead = *head;
-
-  if (oldhead) {
-    newnode->next = oldhead;
-    oldhead->prev = newnode;
-  }
-
-  *head = newnode;
-  return 1;
 }
 
 // Adds a cell to a constraint
