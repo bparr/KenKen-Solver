@@ -96,7 +96,7 @@ void initColConstraint(constraint_t* constraint, int col);
 // Declarations for cell_t functions
 void removePossibles(cell_t* cell, int value);
 void restorePossibles(cell_t* cell, int value);
-int cellnode_insert(cellnode_t* head, cellnode_t* newnode);
+int cellnode_insert(cellnode_t** head, cellnode_t* newnode);
 
 // Algorithm functions
 int solve(int step);
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
       // Add cell to cells list
       newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
       newnode->cell = &(cells[GET_INDEX(x, y, problemSize)]);
-      cellnode_insert(constraint->cells, newnode);
+      cellnode_insert(&constraint->cells, newnode);
       
       // Update cells count
       constraint->numCells++;
@@ -415,8 +415,16 @@ void restorePossibles(cell_t* cell, int value) {
   // TODO unimplemented
 }
 
-// Inserts a node into the cellnode list
-int cellnode_insert(cellnode_t* head, cellnode_t* newnode) {
+// Inserts a node at the front of the cellnode list
+int cellnode_insert(cellnode_t** head, cellnode_t* newnode) {
+  cellnode_t* oldhead = *head;
+
+  if (oldhead) {
+    newnode->next = oldhead;
+    oldhead->prev = newnode;
+  }
+
+  *head = newnode;
   return 1;
 }
 
