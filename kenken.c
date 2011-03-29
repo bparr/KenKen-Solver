@@ -71,6 +71,7 @@ typedef struct step {
 */
 
 // Definitions for possible_t functions
+void initLinePossible(possible_t* possible);
 int cellIsPossible(possible_t* possible, int i);
 int constraintIsPossible(possible_t* possible, int i);
 void addPossible(possible_t* possible, int i);
@@ -342,7 +343,7 @@ void unassignValue(cell_t* cell, int value) {
     addCell(cell->constraints[i], cell, value);
 }
 
-void initLinePossibles(possible_t* possible) {
+void initLinePossible(possible_t* possible) {
   int i;
   possible->num = problemSize;
   for (i = 1; i <= problemSize; i++)
