@@ -231,6 +231,8 @@ int main(int argc, char **argv)
       // Add cell to cells list
       newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
       newnode->cell = &(cells[GET_INDEX(x, y, problemSize)]);
+      newnode->prev = NULL;
+      newnode->next = NULL;
       cellnode_insert(&constraint->cells, newnode);
       
       // Update cells count
@@ -243,6 +245,8 @@ int main(int argc, char **argv)
     }
 
     // Adjust possible list for constraint
+    // TODO: fix for block constraints
+    initLinePossible(&constraint->possibles);
   }
 
   // TODO: validation check to see if all cells are accounted for?
@@ -273,6 +277,7 @@ int solve(int step) {
   if (getNumPossible(&cell->possibles) > 0) {
     // Get next possible value
     while ((newvalue = getNextPossible(&cell->possibles, lastvalue)) > 0) {
+
       assignValue(cell, newvalue);
       
       // Store step information
