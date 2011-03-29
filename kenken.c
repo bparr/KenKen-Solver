@@ -71,11 +71,12 @@ typedef struct step {
 */
 
 // Definitions for possible_t functions
-int isPossible(possible_t* possible, int i);
+int cellIsPossible(possible_t* possible, int i);
+int constraintIsPossible(possible_t* possible, int i);
 void addPossible(possible_t* possible, int i);
 int removePossible(possible_t* possible, int i);
 int getNumPossible(possible_t* possible);
-int getNextPossible(possible_t* possible);
+int getNextPossible(possible_t* possible, int last);
 void markImpossible(possible_t* possible, int i);
 
 // TODO: fill in from Ben
@@ -258,7 +259,7 @@ int main(int argc, char **argv)
 //       stack space required.
 int solve(int step) {
   // Initialize
-  int newvalue, nextCell, lastvalue = 1, possibleSet;
+  int newvalue, nextCell, lastvalue = 0, possibleSet;
   cell_t* cell;
   
   // Find next cell to fill
@@ -375,7 +376,14 @@ int getNumPossible(possible_t* possible) {
 }
 
 // Gets the next possible new value
-int getNextPossible(possible_t* possible) {
+int getNextPossible(possible_t* possible, int last) {
+  int i;
+
+  for (i = last + 1; i < MAX_POSSIBLE_PROBLEM + 1; i++)
+    if (isCellPossible(possible, i))
+      return i;
+
+  return -1;
 }
 
 // Initializes a row constraint for the given row
