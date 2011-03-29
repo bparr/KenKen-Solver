@@ -242,13 +242,15 @@ int main(int argc, char **argv)
     }
 
     // Adjust possible list for constraint
-    // updateBlockPossibles(constraint);
   }
 
   // TODO: validation check to see if all cells are accounted for?
 
   // Run algorithm
   solve(0);
+
+  for (i = 0; i < numCells; i++)
+    printf("%d%c", cells[i].value, ((i + 1) % problemSize != 0) ? ' ' : '\n');
 
   // Free data
   return 0;
@@ -340,6 +342,13 @@ void unassignValue(cell_t* cell, int value) {
     addCell(cell->constraints[i], cell, value);
 }
 
+void initLinePossibles(possible_t* possible) {
+  int i;
+  possible->num = problemSize;
+  for (i = 1; i <= problemSize; i++)
+    possible->flags[i] = POSSIBLE;
+}
+
 // Returns 1 if the value is valid for cells
 int cellIsPossible(possible_t* possible, int i) {
   return (possible->flags[i] == POSSIBLE);
@@ -387,11 +396,45 @@ int getNextPossible(possible_t* possible, int last) {
 }
 
 // Initializes a row constraint for the given row
-void initRowConstraint(constraint_t* constraint, int row) { 
+void initRowConstraint(constraint_t* constraint, int row) {
+  int i;
+  cellnode_t* newnode;
+
+  constraint->type = LINE;
+  constraint->value = -1;
+  constraint->numCells = 0;
+
+  initLinePossible(&constraint->possibles);
+  for (i = 0; i < problemSize; i++) {
+    newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
+    newnode->cell = &cells[GET_INDEX(row, i, MAX_POSSIBLE_PROBLEM)];
+    newnode->prev = NULL;
+    newnode->next = NULL;
+
+    cellnode_insert(&constraint->cells, newnode);
+    constraint->numCells++;
+  }
 }
 
 // Initializes a column constraint for the given column
 void initColConstraint(constraint_t* constraint, int col) {
+  int i;
+  cellnode_t* newnode;
+
+  constraint->type = LINE;
+  constraint->value = -1;
+  constraint->numCells = 0;
+
+  initLinePossible(&constraint->possibles);
+  for (i = 0; i < problemSize; i++) {
+    newnode = (cellnode_t*)calloc(sizeof(cellnode_t), 1);
+    newnode->cell = &cells[GET_INDEX(i, col, MAX_POSSIBLE_PROBLEM)];
+    newnode->prev = NULL;
+    newnode->next = NULL;
+
+    cellnode_insert(&constraint->cells, newnode);
+    constraint->numCells++;
+  }
 }
 
 // Removes a possible value from the constraint
