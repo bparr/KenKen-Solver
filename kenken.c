@@ -3,20 +3,23 @@
  *	@author Jonathan Park (jjp1) and Ben Parr (bparr)
  */
 
+// TODO fix naming inconsistencies
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <unistd.h>
 
-#define MAX_POSSIBLE_PROBLEM 25
+#define MAX_POSSIBLE_PROBLEM 25 // TODO rename to MAX_PROBLEM_SIZE
 #define POSSIBLE 3 // Value of possible such that it actually is possible
-#define NOT_POSSIBLE -1
+#define NOT_POSSIBLE -1 // TODO remove (unused)
 #define UNASSIGNED_VALUE 0
 #define CONSTRAINT_NUM 3
 
 #define MAX_LINE_LEN 2048
 
+// TODO better names? e.g. ROW_CONSTRAINT_INDEX
 #define ROW 0
 #define COLUMN 1
 #define BLOCK 2
@@ -24,6 +27,7 @@
 // Get index into a 2d array initialized as a 1d array
 #define GET_INDEX(x, y, size) ((size) * (x) + (y))
 
+// TODO get rid of (mad hacky)?
 // Get index into a 2d array given addresses
 #define GET_ARRAY_INDEX(head, elem, elemSize) (((elem) - (head))/(elemSize))
 
@@ -32,10 +36,10 @@ typedef enum {
   PLUS,
   MINUS,
   PARTIAL_MINUS,
-  MULT,
-  DIVID,
-  PARTIAL_DIV,
-  SINGLE // SINGLE should be a degenerate case of PLUS
+  MULT, // TODO change name to MULTIPLY
+  DIVID, // TODO change name to DIVIDE
+  PARTIAL_DIV, // TODO change name to PARTIAL_DIVIDE
+  SINGLE // TODO remove?? SINGLE should be a degenerate case of PLUS
 } type_t;
 
 typedef struct possible {
@@ -43,12 +47,11 @@ typedef struct possible {
   int num;
 } possible_t;
 
-// TODO: need head/tail pointers (right now just a head ptr)
 typedef struct constraint {
   type_t type;
   long value;
   possible_t possibles;
-  char flags[MAX_POSSIBLE_PROBLEM*MAX_POSSIBLE_PROBLEM];
+  char flags[MAX_POSSIBLE_PROBLEM*MAX_POSSIBLE_PROBLEM]; // TODO remove
   int numCells;
 } constraint_t;
 
@@ -59,13 +62,13 @@ typedef struct cell {
 } cell_t;
 
 // Definitions for possible_t functions
-void initLinePossible(possible_t* possible);
-int cellIsPossible(possible_t* possible, int i);
-int getNumPossible(possible_t* possible);
+void initLinePossible(possible_t* possible); // TODO make initializeLinePossibles
+int cellIsPossible(possible_t* possible, int i); // TODO remove
+int getNumPossible(possible_t* possible); // TODO remove
 int getNextPossible(possible_t* possible, int last);
 
 // TODO: fill in from Ben
-void initializeAddPossibles();
+void initializePlusPossibles();
 void initializeMinusPossibles();
 void initializeDividePossibles();
 void initializeMultPossibles();
@@ -167,6 +170,7 @@ int main(int argc, char **argv)
     constraint = &constraints[index++];
 
     ptr = strtok(lineBuf, " ");
+    // TODO move down (for Ben's part)
     // Check type
     switch (*ptr) {
       case '+':
@@ -185,7 +189,7 @@ int main(int argc, char **argv)
         constraint->type = SINGLE;
         break;
       default:
-        // TODO: error?
+        // TODO: error! i.e. appError
         constraint->type = SINGLE;
         break;
     }
@@ -225,6 +229,8 @@ int main(int argc, char **argv)
   // Run algorithm
   solve(0);
 
+  // TODO check if a solution was actually found (return value of solve)
+
   for (i = 0; i < numCells; i++)
     printf("%d%c", cells[i].value, ((i + 1) % problemSize != 0) ? ' ' : '\n');
 
@@ -248,6 +254,7 @@ int solve(int step) {
   if (getNumPossible(&cell->possibles) > 0) {
     // Get next possible value
     possible_t oldpossible = cell->possibles;
+    // TODO merge getNextPossible into this function? would make way simpler
     while ((newvalue = getNextPossible(&cell->possibles, lastvalue)) > 0) {
       // Store step information
       lastvalue = newvalue;
@@ -392,6 +399,9 @@ void initColConstraint(constraint_t* constraint, int col) {
 void addCell(constraint_t* constraint, cell_t* cell, int value) {
   int oldValue = constraint->value;
 
+  // Add cell to constraint
+  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
+  constraint->flags[index] = 1;
   constraint->numCells++;
 
   switch (constraint->type) {
@@ -411,16 +421,14 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
   }
   
-  // Add cell to constraint
-  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
-  constraint->flags[index] = 1;
-  constraint->numCells++;
-
   // TODO: Ben's compute Possibilities
 }
 
 // Removes a cell from a constraint
 int removeCell(constraint_t* constraint, cell_t* cell, int value) {
+  // Remove cell from constraint
+  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
+  constraint->flags[index] = 0;
   constraint->numCells--;
 
   switch (constraint->type) {
@@ -443,11 +451,8 @@ int removeCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
   }
 
-  // Remove cell from constraint
-  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
-  constraint->flags[index] = 0;
-  constraint->numCells--;
 
+  // TODO remove block, then remove unused return values
   if (constraint->numCells == 0) {
     if (constraint->type != LINE) {
       // Check if value = 0
@@ -478,3 +483,4 @@ void unixError(const char* str) {
   perror(str);
   exit(1);
 }
+
