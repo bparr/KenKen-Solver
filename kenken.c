@@ -73,12 +73,8 @@ typedef struct step {
 // Definitions for possible_t functions
 void initLinePossible(possible_t* possible);
 int cellIsPossible(possible_t* possible, int i);
-int constraintIsPossible(possible_t* possible, int i);
-void addPossible(possible_t* possible, int i);
-int removePossible(possible_t* possible, int i);
 int getNumPossible(possible_t* possible);
 int getNextPossible(possible_t* possible, int last);
-void markImpossible(possible_t* possible, int i);
 
 // TODO: fill in from Ben
 void initializeAddPossibles();
@@ -95,8 +91,6 @@ void initRowConstraint(constraint_t* constraint, int row);
 void initColConstraint(constraint_t* constraint, int col);
 
 // Declarations for cell_t functions
-void removePossibles(cell_t* cell, int value);
-void restorePossibles(cell_t* cell, int value);
 int cellnode_insert(cellnode_t** head, cellnode_t* newnode);
 
 // Algorithm functions
@@ -361,31 +355,6 @@ int cellIsPossible(possible_t* possible, int i) {
   return (possible->flags[i] == POSSIBLE);
 }
 
-// Returns 1 if the value is valid for constraints.
-int constraintIsPossible(possible_t* possible, int i) {
-  return (possible->flags[i]);
-}
-
-// Increments a value in a possible regardless of state
-void addPossible(possible_t* possible, int i) {
-  if (possible->flags[i] != NOT_POSSIBLE)
-    possible->flags[i]++;
-}
-
-// Decrements a value in a possible if it's not impossible
-int removePossible(possible_t* possible, int i) {
-  if (possible->flags[i]) {
-    possible->flags[i]--;
-    return 1;
-  }
-  return 0;
-}
-
-// Marks a particular value as impossible
-void markImpossible(possible_t* possible, int i) {
-  possible->flags[i] = NOT_POSSIBLE;
-}
-
 // Returns the number of possible values in a possible_t
 int getNumPossible(possible_t* possible) {
   return possible->num;
@@ -442,27 +411,6 @@ void initColConstraint(constraint_t* constraint, int col) {
     cellnode_insert(&constraint->cells, newnode);
     constraint->numCells++;
   }
-}
-
-// Removes a possible value from the constraint
-int removeConstraintsPossible(constraint_t* constraint, int value) {
-  return removePossible(&constraint->possibles, value);
-}
-
-// Removes possibilities from the cell's constraints and its own possibles
-void removePossibles(cell_t* cell, int value) {
-  int i;
-
-  for (i = 0; i < CONSTRAINT_NUM; i++) {
-    // If constraint has the possibility, remove + decrement from cell
-    if (removeConstraintsPossible(cell->constraints[i], value))
-      removePossible(&cell->possibles, value);
-  }
-}
-
-// Restores possibles from the cell's constraints and its own possibles
-void restorePossibles(cell_t* cell, int value) {
-  // TODO unimplemented
 }
 
 // Inserts a node at the front of the cellnode list
