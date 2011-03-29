@@ -450,10 +450,12 @@ int removeCell(constraint_t* constraint, cell_t* cell, int value) {
   constraint->numCells--;
 
   if (constraint->numCells == 0) {
-    // Check if value = 0
-    if (constraint->value != 0) {
-      // Failure
-      return 0;
+    if (constraint->type != LINE) {
+      // Check if value = 0
+      if (constraint->value != 0) {
+        // Failure
+        return 0;
+      }
     }
   }
 
