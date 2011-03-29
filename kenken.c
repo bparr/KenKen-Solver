@@ -59,8 +59,8 @@ typedef struct cell {
 
 typedef struct cellnode {
   cell_t* cell;
-  cell_t* prev;
-  cell_t* next;
+  struct cellnode* prev;
+  struct cellnode* next;
 } cellnode_t;
 
 /** TODO: incorporate for optimizing finding the next possible?
@@ -334,7 +334,7 @@ void assignValue(cell_t* cell, int value) {
   cell->value = value;
 
   // Remove cell from constraints
-  for (i = 0; i < CONSTRAINTS_NUM; i++)
+  for (i = 0; i < CONSTRAINT_NUM; i++)
     removeCell(cell->constraints[i], cell, value);
 }
 
@@ -396,7 +396,7 @@ int getNextPossible(possible_t* possible, int last) {
   int i;
 
   for (i = last + 1; i < MAX_POSSIBLE_PROBLEM + 1; i++)
-    if (isCellPossible(possible, i))
+    if (cellIsPossible(possible, i))
       return i;
 
   return -1;
@@ -490,7 +490,7 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
     case PARTIAL_MINUS:
       // TODO: Partial minus converge
-      if (getNumPossible(constraint) == 2) {
+      if (getNumPossible(&constraint->possibles) == 2) {
         int val1 = getNextPossible(&constraint->possibles, 0);
         int val2 = getNextPossible(&constraint->possibles, val1);
         constraint->value = (val1 + val2)/2;
