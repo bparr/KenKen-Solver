@@ -276,18 +276,19 @@ int solve(int step) {
   // If possible values exist
   if (getNumPossible(&cell->possibles) > 0) {
     // Get next possible value
+    possible_t oldpossible = cell->possibles;
     while ((newvalue = getNextPossible(&cell->possibles, lastvalue)) > 0) {
-
-      assignValue(cell, newvalue);
-      
       // Store step information
       lastvalue = newvalue;
 
+      assignValue(cell, newvalue);
       // Loop to next step
       if (solve(step + 1))
         return 1;
-
       unassignValue(cell, newvalue);
+
+      // Restore step information
+      cell->possibles = oldpossible;
     }
 
   } 
@@ -489,6 +490,13 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
     case PARTIAL_MINUS:
       // TODO: Partial minus converge
+      if (getNumPossible(constraint) == 2) {
+        int val1 = getNextPossible(&constraint->possibles, 0);
+        int val2 = getNextPossible(&constraint->possibles, val1);
+        constraint->value = (val1 + val2)/2;
+      } else {
+        // TODO: ?
+      }
       break;
     case MULT:
       constraint->value *= value;
@@ -513,7 +521,12 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
     case MINUS:
       constraint->type = PARTIAL_MINUS;
-      // TODO: minus case
+      int possible1, possible2;
+
+      // Get possibilities
+      possible1 = value - constraint->value;
+      possible2 = value + constraint->value;
+
       break;
     case MULT:
       constraint->value /= value;
