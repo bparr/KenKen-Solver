@@ -24,6 +24,9 @@
 // Get index into a 2d array initialized as a 1d array
 #define GET_INDEX(x, y, size) ((size) * (x) + (y))
 
+// Get index into a 2d array given addresses
+#define GET_ARRAY_INDEX(head, elem, elemSize) (((elem) - (head))/(elemSize))
+
 typedef enum {
   LINE,
   PLUS,
@@ -32,7 +35,7 @@ typedef enum {
   MULT,
   DIVID,
   PARTIAL_DIV,
-  SINGLE
+  SINGLE // SINGLE should be a degenerate case of PLUS
 } type_t;
 
 typedef struct possible {
@@ -54,13 +57,6 @@ typedef struct cell {
   possible_t possibles;
   struct constraint* constraints[CONSTRAINT_NUM];
 } cell_t;
-
-/** TODO: incorporate for optimizing finding the next possible?
-typedef struct step {
-  cell_t* modifiedCell;
-  int lastIndex;
-} step_t;
-*/
 
 // Definitions for possible_t functions
 void initLinePossible(possible_t* possible);
@@ -210,14 +206,13 @@ int main(int argc, char **argv)
       // Mark as present
       constraint->flags[GET_INDEX(x, y, MAX_POSSIBLE_PROBLEM)] = 1;
 
-      // Add cell to cells list
-      
       // Update cells count
       constraint->numCells++;
 
-      // add constraint to cell
-      newnode->cell->constraints[BLOCK] = constraint;
+      // Add block constraint to cell
+      cells[GET_INDEX(x, y, problemSize)].constraints[BLOCK] = constraint;
 
+      // Iterate across the line
       ptr = strtok(NULL, " ");
     }
 
@@ -293,7 +288,7 @@ int findNextCell() {
     if (cell->value != UNASSIGNED_VALUE)
       continue;
 
-    if ((numPossible = getNumPossible(&(cell->possibles))) < minPossible) {
+    if ((numPossible = getNumPossible(&cell->possibles)) < minPossible) {
       minPossible = numPossible;
       minCell = cell;
       index = i;
@@ -364,7 +359,12 @@ void initRowConstraint(constraint_t* constraint, int row) {
 
   initLinePossible(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
+    // Mark as present
+    constraint->flags[GET_INDEX(row, i, MAX_POSSIBLE_PROBLEM)] = 1;
     constraint->numCells++;
+
+    // Add row constraint to cell
+    cells[GET_INDEX(row, i, problemSize)].constraints[ROW] = constraint;
   }
 }
 
@@ -378,7 +378,12 @@ void initColConstraint(constraint_t* constraint, int col) {
 
   initLinePossible(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
+    // Mark as present
+    constraint->flags[GET_INDEX(i, col, MAX_POSSIBLE_PROBLEM)] = 1;
     constraint->numCells++;
+
+    // Add col constraint to cell
+    cells[GET_INDEX(i, col, problemSize)].constraints[COLUMN] = constraint;
   }
 }
 
@@ -394,13 +399,6 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
     case PARTIAL_MINUS:
       // TODO: Partial minus converge
-      if (getNumPossible(&constraint->possibles) == 2) {
-        int val1 = getNextPossible(&constraint->possibles, 0);
-        int val2 = getNextPossible(&constraint->possibles, val1);
-        constraint->value = (val1 + val2)/2;
-      } else {
-        // TODO: ?
-      }
       break;
     case MULT:
       constraint->value *= value;
@@ -411,6 +409,11 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
     default:
       break;
   }
+  
+  // Add cell to constraint
+  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
+  constraint->flags[index] = 1;
+  constraint->numCells++;
 
   // TODO: Ben's compute Possibilities
 }
@@ -425,12 +428,6 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
     case MINUS:
       constraint->type = PARTIAL_MINUS;
-      int possible1, possible2;
-
-      // Get possibilities
-      possible1 = value - constraint->value;
-      possible2 = value + constraint->value;
-
       break;
     case MULT:
       constraint->value /= value;
@@ -443,6 +440,20 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
       break;
     default:
       break;
+  }
+
+  // Remove cell from constraint
+  int index = GET_ARRAY_INDEX(cells, cell, sizeof(cell_t));
+  constraint->flags[index] = 0;
+  constraint->numCells--;
+
+  if (constraint->numCells == 0) {
+    // Check if value = 0
+    if (constraint->value == 0) {
+      // Success
+    } else {
+      // Failure
+    }
   }
 
   // TODO: Ben updates constraint's possible values
