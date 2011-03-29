@@ -110,12 +110,12 @@ int main(int argc, char **argv)
   unsigned P = 1;
   int optchar, index, numCages;
   char lineBuf[MAX_LINE_LEN];
-  char* ptr, *coordinate;
+  char* ptr;
   int x, y, i;
   constraint_t* constraint;
 
   // Check arguments
-  if (argc != 0)
+  if (argc != 2)
     usage(argv[0]);
   
   // Read in file
@@ -194,14 +194,13 @@ int main(int argc, char **argv)
     ptr = strtok(NULL, " ");
     constraint->value = (long)atoi(ptr);
 
-    ptr = strtok(NULL, " ");
+    ptr = strtok(NULL, ", ");
     // Read in coordinates for cells
     while (ptr) {
       // TODO: error checking
-      coordinate = strtok(ptr, ","); // x-value
-      x = atoi(coordinate);
-      coordinate = strtok(NULL, ",");
-      y = atoi(coordinate);
+      x = atoi(ptr);
+      ptr = strtok(NULL, ", "); // x-value
+      y = atoi(ptr);
 
       // Mark as present
       constraint->flags[GET_INDEX(x, y, MAX_POSSIBLE_PROBLEM)] = 1;
@@ -211,9 +210,9 @@ int main(int argc, char **argv)
 
       // Add block constraint to cell
       cells[GET_INDEX(x, y, problemSize)].constraints[BLOCK] = constraint;
-
-      // Iterate across the line
-      ptr = strtok(NULL, " ");
+      
+      // Iterate again
+      ptr = strtok(NULL, ", ");
     }
 
     // Adjust possible list for constraint
