@@ -19,7 +19,7 @@
 
 #define MAX_LINE_LEN 2048
 
-// TODO remove
+// Indexes of different types of constraints in cell_t constraint array
 #define ROW_CONSTRAINT_INDEX 0
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
@@ -56,11 +56,9 @@ typedef struct cell {
   constraint_t* constraints[CONSTRAINT_NUM];
 } cell_t;
 
-// Funtions to create constraints
-// TODO make like createBlockConstraint
+// Funtions to initialize line constraints
 void initRowConstraint(constraint_t* constraint, int row);
 void initColumnConstraint(constraint_t* constraint, int col);
-constraint_t* createBlockConstraint(char type, long value, int numCells);
 
 // Functions to initialize constraint possibles
 // TODO: fill in from Ben
@@ -88,8 +86,8 @@ void unixError(const char* str);
 
 // Problem size
 int N;
-// Number of cells in the problem
-int numCells; // TODO remove? at least rename?
+// Total number of cells in the problem
+int totalNumCells;
 // Problem grid
 cell_t* cells;
 // Number of constraints
@@ -124,8 +122,8 @@ int main(int argc, char **argv)
   numConstraints = 2 * N + atoi(lineBuf);
 
   // Allocate space for cells and constraints
-  numCells = N * N;
-  cells = (cell_t*)calloc(sizeof(cell_t), numCells);
+  totalNumCells = N * N;
+  cells = (cell_t*)calloc(sizeof(cell_t), totalNumCells);
   if (!cells)
     unixError("Failed to allocate memory for the cells");
 
@@ -196,11 +194,11 @@ int main(int argc, char **argv)
   }
 
   // Run algorithm
-  if (!solve(0)) {
+  if (!solve(0))
     appError("No solution found");
-  }
 
-  for (i = 0; i < numCells; i++)
+  // Print solution if one found
+  for (i = 0; i < totalNumCells; i++)
     printf("%d%c", cells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
 
   // Free allocated memory
@@ -256,7 +254,7 @@ int findNextCell() {
   cell_t* minCell, *cell;
 
   // Loop and check all unassigned cells
-  for (i = 0; i < numCells; i++) {
+  for (i = 0; i < totalNumCells; i++) {
     if (minPossible == 0)
       break;
 
@@ -361,41 +359,29 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
 // Initializes a row constraint for the given row
 void initRowConstraint(constraint_t* constraint, int row) {
   int i;
-  cell_t* cell;
 
   constraint->type = LINE;
   constraint->value = -1;
-  constraint->numCells = 0;
-
+  constraint->numCells = N;
   initLinePossibles(&constraint->possibles);
-  for (i = 0; i < N; i++) {
-    // Increment number of cells
-    constraint->numCells++;
 
-    // Add row constraint to cell
-    cell = &cells[GET_CELL(row, i)];
-    cells->constraints[ROW_CONSTRAINT_INDEX] = constraint;
-  }
+  // Add constraint to its cells
+  for (i = 0; i < N; i++)
+    cells[GET_CELL(row, i)].constraints[ROW_CONSTRAINT_INDEX] = constraint;
 }
 
 // Initializes a column constraint for the given column
 void initColumnConstraint(constraint_t* constraint, int col) {
   int i;
-  cell_t* cell;
 
   constraint->type = LINE;
   constraint->value = -1;
-  constraint->numCells = 0;
-
+  constraint->numCells = N;
   initLinePossibles(&constraint->possibles);
-  for (i = 0; i < N; i++) {
-    // Increment number of cells
-    constraint->numCells++;
 
-    // Add col constraint to cell
-    cell = &cells[GET_CELL(i, col)];
-    cell->constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
-  }
+  // Add constraint to its cells
+  for (i = 0; i < N; i++)
+    cells[GET_CELL(i, col)].constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
 }
 
 // Initialize possibles for a line constraint
