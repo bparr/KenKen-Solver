@@ -289,8 +289,8 @@ int solve(int step) {
 // TODO make faster
 void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
                           char* newFlags) {
-
   int i, j, k;
+  char old;
   for (i = 1; i <= N; i++) {
     // Only update possibles that changed
     if (originalFlags[i] == newFlags[i])
@@ -310,10 +310,18 @@ void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
         continue;
 
       // Found a cell
-      if (originalFlags[i] == POSSIBLE)
+      old = cells[j].possibles.flags[i];
+      if (originalFlags[i] == POSSIBLE) {
+        if (old == POSSIBLE)
+          cells[j].possibles.num--;
         cells[j].possibles.flags[i]++;
-      else
+      }
+      else {
+        if (old - 1 == POSSIBLE)
+          cells[j].possibles.num++;
+
         cells[j].possibles.flags[i]--;
+      }
     }
   }
 }
@@ -348,7 +356,7 @@ void removeCell(constraint_t* constraint, int cellValue) {
     case MULTIPLY:
       value /= cellValue;
       constraint->value = value;
-      initPlusPossibles(possibles, value, numCells);
+      initMultiplyPossibles(possibles, value, numCells);
       break;
 
     case DIVIDE:
@@ -402,7 +410,7 @@ void addCell(constraint_t* constraint, int cellValue) {
     case MULTIPLY:
       value *= cellValue;
       constraint->value = value;
-      initPlusPossibles(possibles, value, numCells);
+      initMultiplyPossibles(possibles, value, numCells);
       break;
 
     case PARTIAL_DIVIDE:
@@ -513,7 +521,7 @@ void initPartialMinusPossibles(possible_t* possibles, long value,
                                int cellValue) {
   int num = 0;
 
-  memset(possibles, IMPOSSIBLE, N + 1);
+  memset(possibles->flags, IMPOSSIBLE, N + 1);
 
   if (cellValue + value <= N) {
     possibles->flags[cellValue + value] = POSSIBLE;
@@ -549,19 +557,21 @@ void initDividePossibles(possible_t* possibles, long value, int numCells) {
 
   memset(possibles->flags, IMPOSSIBLE, N + 1);
   for (i = 1; i <= N / value; i++) {
-    if (value % i == 0) {
-      if (possibles->flags[i] != POSSIBLE) {
-        possibles->flags[i] = POSSIBLE;
-        num += 2;
-      }
-      else {
-        // One part of found possible pair was already found
-        num++;
-      }
-
-      possibles->flags[i * value] = POSSIBLE;
+    if (possibles->flags[i] != POSSIBLE) {
+      possibles->flags[i] = POSSIBLE;
+      num += 2;
     }
+    else {
+      // One part of found possible pair was already found
+      num++;
+    }
+
+    // i * value is new (Note: value can't = 1 since 1/ only answer is 1,1
+    // and a divide has either 2 cells on same row or column)
+    possibles->flags[i * value] = POSSIBLE;
   }
+
+  possibles->num = num;
 }
 
 // Initialize possibles for a partial divide constraint
@@ -569,7 +579,7 @@ void initPartialDividePossibles(possible_t* possibles, long value,
                                int cellValue) {
   int num = 0;
 
-  memset(possibles, IMPOSSIBLE, N + 1);
+  memset(possibles->flags, IMPOSSIBLE, N + 1);
 
   if (cellValue * value <= N) {
     possibles->flags[cellValue * value] = POSSIBLE;
