@@ -209,75 +209,62 @@ int main(int argc, char **argv)
 }
 
 // Main recursive function used to solve the program
-// Note: dangerous for large problem sizes because of the amount of
-//       stack space required.
 int solve(int step) {
-  // Initialize
-  int newValue, nextCell, possibleSet;
+  int i;
   cell_t* cell;
 
-  // Find next cell to fill
-  nextCell = findNextCell();
-  cell = &(cells[nextCell]);
+  // Success if all cells filled in
+  if (step == totalNumCells)
+    return 1;
 
-  // If possible values exist
-  if (cell->possibles.num > 0) {
-    // Get next possible value
-    possible_t oldPossible = cell->possibles;
-    for (newValue = 1; newValue <= N; newValue++) {
-      if (oldPossible.flags[newValue] == POSSIBLE)
-        continue;
+  // Get next cell to fill
+  cell = &(cells[findNextCell()]);
 
-      assignValue(cell, newValue);
-      // Loop to next step
-      if (solve(step + 1))
-        return 1;
-      unassignValue(cell, newValue);
+  // Fail early if next cell has no possibilities
+  if (cell->possibles.num == 0)
+    return 0;
 
-      // Restore step information
-      cell->possibles = oldPossible;
-    }
+  // Try all possible values
+  for (i = 1; i <= N; i++) {
+    if (cell->possibles.flags[i] != POSSIBLE)
+      continue;
 
+    assignValue(cell, i);
+    if (solve(step + 1))
+      return 1;
+    unassignValue(cell, i);
   }
 
-  // No possibilities remain
+  // Fail if none of possibilities worked
   return 0;
 }
 
-/** @brief Finds the next cell to assign. Returns index of the cell
- *
- *  @return index of next cell
- *  @return -1 if there exists a cell that can't be filled
- */
+// Find and return index of the next cell to fill. The next cell is the
+// unassigned cell with mininum number of possibilities.
 int findNextCell() {
-  int i, minPossible = INT_MAX, numPossible = 0, index;
-  cell_t* minCell, *cell;
+  int i, numPossibles;
+  int minIndex = 0, minPossibles = INT_MAX;
 
-  // Loop and check all unassigned cells
-  for (i = 0; i < totalNumCells; i++) {
-    if (minPossible == 0)
-      break;
-
-    cell = &(cells[i]);
-
+  // Loop and check all unassigned cells, ending early if found one with no
+  // possibilities (can't find a cell with fewer possibilities than zero)
+  for (i = 0; minPossibles > 0 && i < totalNumCells; i++) {
     // Skip assigned cells
-    if (cell->value != UNASSIGNED_VALUE)
+    if (cells[i].value != UNASSIGNED_VALUE)
       continue;
 
-    if ((numPossible = cell->possibles.num) < minPossible) {
-      minPossible = numPossible;
-      minCell = cell;
-      index = i;
+    numPossibles = cells[i].possibles.num;
+    if (numPossibles < minPossibles) {
+      minIndex = i;
+      minPossibles = numPossibles;
     }
   }
 
-  // If minPossible == 0, there exists a cell that can't be filled
-  return index;
+  return minIndex;
 }
 
 // Assigns a value to a cell
 void assignValue(cell_t* cell, int value) {
-  int i, ret = 1;
+  int i;
 
   // Assign value
   cell->value = value;
@@ -302,9 +289,6 @@ void unassignValue(cell_t* cell, int value) {
 
 // Adds a cell to a constraint
 void addCell(constraint_t* constraint, cell_t* cell, int value) {
-  int oldValue = constraint->value;
-
-  // Add cell to constraint
   constraint->numCells++;
 
   switch (constraint->type) {
@@ -329,7 +313,6 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
 
 // Removes a cell from a constraint
 void removeCell(constraint_t* constraint, cell_t* cell, int value) {
-  // Remove cell from constraint
   constraint->numCells--;
 
   switch (constraint->type) {
