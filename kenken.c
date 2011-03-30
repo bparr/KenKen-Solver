@@ -25,6 +25,8 @@
 // Number of constraints a cell has (1 row constraint, 1 column constraint,
 // 1 block constraint)
 #define NUM_CELL_CONSTRAINTS 3
+// Value of node at start and end of cell list
+#define END_NODE -1
 
 // Indexes of different types of constraints in cell_t constraint array
 #define ROW_CONSTRAINT_INDEX 0
@@ -54,12 +56,22 @@ typedef struct possible {
   int num;
 } possible_t;
 
+typedef struct cellnode {
+  int previous;
+  int next;
+} cellnode_t;
+
+typedef struct celllist {
+  int start;
+  cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
+} celllist_t;
+
 typedef struct constraint {
   type_t type;
   long value;
   possible_t possibles;
   int numCells;
-  int cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
+  celllist_t cellList;
 } constraint_t;
 
 typedef struct cell {
@@ -92,6 +104,11 @@ void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
                           char* newFlags);
 void removeCell(constraint_t* constraint, int cellIndex, int cellValue);
 void addCell(constraint_t* constraint, int cellIndex, int cellValue);
+
+// Cell list functions
+inline void initList(celllist_t* cellList);
+inline void addNode(celllist_t* cellList, int node);
+inline void removeNode(celllist_t* cellList, int node);
 
 // Miscellaneous functions
 void usage(char* program);
@@ -168,6 +185,7 @@ int main(int argc, char **argv)
 
     // Read in cell coordinates
     numCells = 0;
+    initList(&(constraint->cellList));
     while ((ptr = strtok(NULL, ", "))) {
       numCells++;
 
@@ -176,7 +194,7 @@ int main(int argc, char **argv)
       y = atoi(ptr);
 
       // Add block constraint to cell
-      constraint->cells[GET_CELL(x, y)] = 1;
+      addNode(&(constraint->cellList), GET_CELL(x, y));
       cells[GET_CELL(x, y)].constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
     }
 
@@ -298,11 +316,9 @@ void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
     if (originalFlags[i] == newFlags[i])
       continue;
 
-    // Find unassigned cells who are in the constraint
-    for (j = 0; j < totalNumCells; j++) {
-      if (!constraint->cells[j])
-        continue;
-
+    // Update cells who are in the constraint
+    j = constraint->cellList.start;
+    for (; j != END_NODE; j = (constraint->cellList.cells[j]).next) {
       old = cells[j].possibles.flags[i];
       if (originalFlags[i] == POSSIBLE) {
         if (old == POSSIBLE)
@@ -368,7 +384,7 @@ void removeCell(constraint_t* constraint, int cellIndex, int cellValue) {
   }
 
   // Remove cell from constraints list, so it isn't modified anymore
-  constraint->cells[cellIndex] = 0;
+  removeNode(&(constraint->cellList), cellIndex);
   updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
 }
 
@@ -427,7 +443,7 @@ void addCell(constraint_t* constraint, int cellIndex, int cellValue) {
 
   updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
   // Add cell back after updating cells, so its possibles aren't modified
-  constraint->cells[cellIndex] = 1;
+  addNode(&(constraint->cellList), cellIndex);
 
 }
 
@@ -441,8 +457,9 @@ void initRowConstraint(constraint_t* constraint, int row) {
   initLinePossibles(&constraint->possibles);
 
   // Add constraint to its cells
+  initList(&(constraint->cellList));
   for (i = 0; i < N; i++) {
-    constraint->cells[GET_CELL(row, i)] = 1;
+    addNode(&(constraint->cellList), GET_CELL(row, i));
     cells[GET_CELL(row, i)].constraints[ROW_CONSTRAINT_INDEX] = constraint;
   }
 }
@@ -457,8 +474,9 @@ void initColumnConstraint(constraint_t* constraint, int col) {
   initLinePossibles(&constraint->possibles);
 
   // Add constraint to its cells
+  initList(&(constraint->cellList));
   for (i = 0; i < N; i++) {
-    constraint->cells[GET_CELL(i, col)] = 1;
+    addNode(&(constraint->cellList), GET_CELL(i, col));
     cells[GET_CELL(i, col)].constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
   }
 }
@@ -599,6 +617,37 @@ void initPartialDividePossibles(possible_t* possibles, long value,
 // Initialize possibles for a single constraint
 void initSinglePossibles(possible_t* possibles, long value, int numCells) {
   initPlusPossibles(possibles, value, numCells);
+}
+
+// Initialize a cell list
+inline void initList(celllist_t* cellList) {
+  cellList->start = END_NODE;
+}
+
+// Add node to a cell list
+inline void addNode(celllist_t* cellList, int node) {
+  int start = cellList->start;
+
+  cellList->cells[node].previous = END_NODE;
+  cellList->cells[node].next = start;
+  cellList->start = node;
+
+  if (start != END_NODE)
+    cellList->cells[start].previous = node;
+}
+
+// Remove a node from a cell list
+inline void removeNode(celllist_t* cellList, int node) {
+  int previous = cellList->cells[node].previous;
+  int next = cellList->cells[node].next;
+
+  if (next != END_NODE)
+    cellList->cells[next].previous = previous;
+
+  if (previous == END_NODE)
+    cellList->start = next;
+  else
+    cellList->cells[previous].next = next;
 }
 
 // Print usage information and exit
