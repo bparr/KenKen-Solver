@@ -11,7 +11,8 @@
 #include <limits.h>
 #include <unistd.h>
 
-#define MAX_PROBLEM_SIZE 25 
+#define MAX_PROBLEM_SIZE 25
+// TODO make POSSIBLE = 0?
 #define POSSIBLE 3 // Value of possible such that it actually is possible
 #define UNASSIGNED_VALUE 0
 #define CONSTRAINT_NUM 3
@@ -32,7 +33,7 @@ typedef enum {
   PARTIAL_MINUS,
   MULTIPLY,
   DIVIDE,
-  PARTIAL_DIVIDE, 
+  PARTIAL_DIVIDE,
   SINGLE // TODO remove?? SINGLE should be a degenerate case of PLUS
 } type_t;
 
@@ -108,7 +109,7 @@ int main(int argc, char **argv)
   // Check arguments
   if (argc != 2)
     usage(argv[0]);
-  
+
   // Read in file
   if (!(in = fopen(argv[optind], "r"))) {
     unixError("Failed to open input file");
@@ -198,7 +199,7 @@ int main(int argc, char **argv)
       // Add block constraint to cell
       cell = &cells[GET_INDEX(x, y, problemSize)];
       cell->constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
-      
+
       // Iterate again
       ptr = strtok(NULL, ", ");
     }
@@ -222,18 +223,18 @@ int main(int argc, char **argv)
   return 0;
 }
 
-// Main recursive function used to solve the program 
+// Main recursive function used to solve the program
 // Note: dangerous for large problem sizes because of the amount of
 //       stack space required.
 int solve(int step) {
   // Initialize
   int newValue, nextCell, possibleSet;
   cell_t* cell;
-  
+
   // Find next cell to fill
   nextCell = findNextCell();
   cell = &(cells[nextCell]);
-  
+
   // If possible values exist
   if (cell->possibles.num > 0) {
     // Get next possible value
@@ -252,8 +253,8 @@ int solve(int step) {
       cell->possibles = oldPossible;
     }
 
-  } 
-  
+  }
+
   // No possibilities remain
   return 0;
 }
@@ -269,9 +270,9 @@ int findNextCell() {
 
   // Loop and check all unassigned cells
   for (i = 0; i < numCells; i++) {
-    if (minPossible == 0) 
+    if (minPossible == 0)
       break;
-    
+
     cell = &(cells[i]);
 
     // Skip assigned cells
@@ -302,6 +303,7 @@ void assignValue(cell_t* cell, int value) {
 }
 
 // Unassigns a value to a cell
+// TODO mark as impossible
 void unassignValue(cell_t* cell, int value) {
   int i;
 
@@ -336,7 +338,7 @@ void addCell(constraint_t* constraint, cell_t* cell, int value) {
     default:
       break;
   }
-  
+
   // TODO: Ben's compute Possibilities
 }
 
@@ -381,7 +383,7 @@ void initializeLinePossibles(possible_t* possible) {
 void initRowConstraint(constraint_t* constraint, int row) {
   int i;
   cell_t* cell;
-  
+
   constraint->type = LINE;
   constraint->value = -1;
   constraint->numCells = 0;
