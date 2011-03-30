@@ -59,6 +59,7 @@ typedef struct constraint {
   long value;
   possible_t possibles;
   int numCells;
+  int cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
 } constraint_t;
 
 typedef struct cell {
@@ -89,8 +90,8 @@ void initSinglePossibles(possible_t* possibles, long value, int numCells);
 int solve(int step);
 void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
                           char* newFlags);
-void removeCell(constraint_t* constraint, int cellValue);
-void addCell(constraint_t* constraint, int cellValue);
+void removeCell(constraint_t* constraint, int cellIndex, int cellValue);
+void addCell(constraint_t* constraint, int cellIndex, int cellValue);
 
 // Miscellaneous functions
 void usage(char* program);
@@ -175,6 +176,7 @@ int main(int argc, char **argv)
       y = atoi(ptr);
 
       // Add block constraint to cell
+      constraint->cells[GET_CELL(x, y)] = 1;
       cells[GET_CELL(x, y)].constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
     }
 
@@ -262,7 +264,7 @@ int solve(int step) {
   cell = &(cells[minIndex]);
 
   // Try all possible values for next cell
-  for (i = 1; i <= N; i++) {
+  for (i = N; i > 0; i--) {
     if (cell->possibles.flags[i] != POSSIBLE)
       continue;
 
@@ -270,7 +272,7 @@ int solve(int step) {
 
     // Remove cell from its constraints
     for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
-      removeCell(cell->constraints[j], i);
+      removeCell(cell->constraints[j], minIndex, i);
 
     if (solve(step + 1))
       return 1;
@@ -278,7 +280,7 @@ int solve(int step) {
     // Add cell back to its constraints
     // TODO optimization: avoid adding cell back just to remove it?
     for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
-      addCell(cell->constraints[j], i);
+      addCell(cell->constraints[j], minIndex, i);
   }
 
   // Unassign value and fail if none of possibilities worked
@@ -289,7 +291,7 @@ int solve(int step) {
 // TODO make faster
 void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
                           char* newFlags) {
-  int i, j, k;
+  int i, j;
   char old;
   for (i = 1; i <= N; i++) {
     // Only update possibles that changed
@@ -298,18 +300,9 @@ void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
 
     // Find unassigned cells who are in the constraint
     for (j = 0; j < totalNumCells; j++) {
-      if (cells[j].value != UNASSIGNED_VALUE)
+      if (!constraint->cells[j])
         continue;
 
-      for (k = 0; k < NUM_CELL_CONSTRAINTS; k++) {
-        if (cells[j].constraints[k] == constraint)
-          break;
-      }
-
-      if (k == NUM_CELL_CONSTRAINTS)
-        continue;
-
-      // Found a cell
       old = cells[j].possibles.flags[i];
       if (originalFlags[i] == POSSIBLE) {
         if (old == POSSIBLE)
@@ -328,7 +321,7 @@ void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
 
 
 // Remove a cell with certain value from a constraint
-void removeCell(constraint_t* constraint, int cellValue) {
+void removeCell(constraint_t* constraint, int cellIndex, int cellValue) {
   int numCells = --(constraint->numCells);
   long value = constraint->value;
 
@@ -374,11 +367,13 @@ void removeCell(constraint_t* constraint, int cellValue) {
       break;
   }
 
+  // Remove cell from constraints list, so it isn't modified anymore
+  constraint->cells[cellIndex] = 0;
   updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
 }
 
 // Add a cell with a specific value to a constraint
-void addCell(constraint_t* constraint, int cellValue) {
+void addCell(constraint_t* constraint, int cellIndex, int cellValue) {
   int numCells = ++(constraint->numCells);
   long value = constraint->value;
 
@@ -431,6 +426,9 @@ void addCell(constraint_t* constraint, int cellValue) {
   }
 
   updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
+  // Add cell back after updating cells, so its possibles aren't modified
+  constraint->cells[cellIndex] = 1;
+
 }
 
 // Initializes a row constraint for the given row
@@ -443,8 +441,10 @@ void initRowConstraint(constraint_t* constraint, int row) {
   initLinePossibles(&constraint->possibles);
 
   // Add constraint to its cells
-  for (i = 0; i < N; i++)
+  for (i = 0; i < N; i++) {
+    constraint->cells[GET_CELL(row, i)] = 1;
     cells[GET_CELL(row, i)].constraints[ROW_CONSTRAINT_INDEX] = constraint;
+  }
 }
 
 // Initializes a column constraint for the given column
@@ -457,8 +457,10 @@ void initColumnConstraint(constraint_t* constraint, int col) {
   initLinePossibles(&constraint->possibles);
 
   // Add constraint to its cells
-  for (i = 0; i < N; i++)
+  for (i = 0; i < N; i++) {
+    constraint->cells[GET_CELL(i, col)] = 1;
     cells[GET_CELL(i, col)].constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
+  }
 }
 
 // Initialize possibles for a cell
