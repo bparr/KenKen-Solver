@@ -24,8 +24,8 @@
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
 
-// Get index into a 2d array initialized as a 1d array
-#define GET_INDEX(x, y, size) ((size) * (x) + (y))
+// Get cell at (x, y)
+#define GET_CELL(x, y) (N * (x) + (y))
 
 typedef enum {
   LINE,
@@ -61,7 +61,7 @@ typedef struct cell {
 void initRowConstraint(constraint_t* constraint, int row);
 void initColumnConstraint(constraint_t* constraint, int col);
 constraint_t* createBlockConstraint(char type, long value, int numCells);
-                               
+
 // Functions to initialize constraint possibles
 // TODO: fill in from Ben
 void initLinePossibles(possible_t* possibles);
@@ -87,9 +87,9 @@ void appError(const char* str);
 void unixError(const char* str);
 
 // Problem size
-int problemSize;
+int N;
 // Number of cells in the problem
-int numCells;
+int numCells; // TODO remove? at least rename?
 // Problem grid
 cell_t* cells;
 // Number of constraints
@@ -100,128 +100,113 @@ constraint_t* constraints;
 int main(int argc, char **argv)
 {
   FILE* in;
-  unsigned P = 1;
-  int optchar, index, numCages;
-  char lineBuf[MAX_LINE_LEN];
+  char type, lineBuf[MAX_LINE_LEN];
   char* ptr;
-  int x, y, i;
+  int i, x, y, numCells;
+  long value;
   constraint_t* constraint;
-  cell_t* cell;
 
   // Check arguments
   if (argc != 2)
     usage(argv[0]);
 
   // Read in file
-  if (!(in = fopen(argv[optind], "r"))) {
+  if (!(in = fopen(argv[1], "r"))) {
     unixError("Failed to open input file");
     exit(1);
   }
 
-  // TODO: Consider using the maximum sizes for all initialization to be
-  //       consistent throughout the code
-
-  // Read in problem size
+  // Read in problem size and number of constraints
   readLine(in, lineBuf);
-  problemSize = atoi(lineBuf);
+  N = atoi(lineBuf);
+  readLine(in, lineBuf);
+  // N row constraints + N column constraints + number of block constraints
+  numConstraints = 2 * N + atoi(lineBuf);
 
-  numCells = problemSize*problemSize;
-
-  // Initiate problem board
+  // Allocate space for cells and constraints
+  numCells = N * N;
   cells = (cell_t*)calloc(sizeof(cell_t), numCells);
   if (!cells)
     unixError("Failed to allocate memory for the cells");
 
-  numConstraints = 2*problemSize; // problemSize row constraints +
-                                  // problemSize col constraints
-
-  // Read in number of constraints
-  readLine(in, lineBuf);
-  numCages = atoi(lineBuf);
-  numConstraints += numCages;
-
-  // TODO: consider order of constraints inserted into the array or
-  //       after insertion then sort by size?
   constraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
   if (!constraints)
     unixError("Failed to allocate memory for the constraints");
 
-  // Initialize row constraints
-  index = 0;
-  for (i = 0; i < problemSize; i++)
-    initRowConstraint(&constraints[index++], i);
+  // Initialize row and column constraints
+  for (i = 0; i < N; i++) {
+    initRowConstraint(&constraints[i], i);
+    initColumnConstraint(&constraints[i + N], i);
+  }
 
-  // Initialize column constraints
-  for (i = 0; i < problemSize; i++)
-    initColumnConstraint(&constraints[index++], i);
-
-  // Read in block constraints
-  for (i = 0; i < numCages; i++) {
+  // Initialize block constraints
+  for (i = 2 * N; i < numConstraints; i++) {
     readLine(in, lineBuf);
-    constraint = &constraints[index++];
+    constraint = &(constraints[i]);
 
+    // Read in type
     ptr = strtok(lineBuf, " ");
-    // TODO move down (for Ben's part)
-    // Check type
-    switch (*ptr) {
+    type = *ptr;
+
+    // Read in value
+    ptr = strtok(NULL, " ");
+    value = atol(ptr);
+
+    // Read in cell coordinates
+    numCells = 0;
+    while ((ptr = strtok(NULL, ", "))) {
+      numCells++;
+
+      x = atoi(ptr);
+      ptr = strtok(NULL, ", ");
+      y = atoi(ptr);
+
+      // Add block constraint to cell
+      cells[GET_CELL(x, y)].constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
+    }
+
+    constraint->numCells = numCells;
+    constraint->value = value;
+
+    // Initialize constraint's type and possibles
+    switch (type) {
       case '+':
         constraint->type = PLUS;
+        initPlusPossibles(&(constraint->possibles), value, numCells);
         break;
       case '-':
         constraint->type = MINUS;
+        initMinusPossibles(&(constraint->possibles), value, numCells);
         break;
       case 'x':
         constraint->type = MULTIPLY;
+        initMultiplyPossibles(&(constraint->possibles), value, numCells);
         break;
       case '/':
         constraint->type = DIVIDE;
+        initDividePossibles(&(constraint->possibles), value, numCells);
         break;
       case '!':
         constraint->type = SINGLE;
+        initSinglePossibles(&(constraint->possibles), value, numCells);
         break;
       default:
         appError("Malformed constraint in input file");
     }
-
-    // Read in value
-    ptr = strtok(NULL, " ");
-    constraint->value = (long)atoi(ptr);
-
-    ptr = strtok(NULL, ", ");
-    // Read in coordinates for cells
-    while (ptr) {
-      // TODO: error checking
-      x = atoi(ptr);
-      ptr = strtok(NULL, ", "); // x-value
-      y = atoi(ptr);
-
-      // Update cells count
-      constraint->numCells++;
-
-      // Add block constraint to cell
-      cell = &cells[GET_INDEX(x, y, problemSize)];
-      cell->constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
-
-      // Iterate again
-      ptr = strtok(NULL, ", ");
-    }
-
-    // Adjust possible list for constraint
-    // TODO: fix for block constraints
-    initLinePossibles(&constraint->possibles);
   }
 
-  // TODO: validation check to see if all cells are accounted for?
-
   // Run algorithm
-  solve(0);
-
-  // TODO check if a solution was actually found (return value of solve)
+  if (!solve(0)) {
+    appError("No solution found");
+  }
 
   for (i = 0; i < numCells; i++)
-    printf("%d%c", cells[i].value, ((i + 1) % problemSize != 0) ? ' ' : '\n');
+    printf("%d%c", cells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
 
-  // Free data
+  // Free allocated memory
+  free(cells);
+  free(constraints);
+
   return 0;
 }
 
@@ -241,7 +226,7 @@ int solve(int step) {
   if (cell->possibles.num > 0) {
     // Get next possible value
     possible_t oldPossible = cell->possibles;
-    for (newValue = 1; newValue <= problemSize; newValue++) {
+    for (newValue = 1; newValue <= N; newValue++) {
       if (oldPossible.flags[newValue] == POSSIBLE)
         continue;
 
@@ -373,14 +358,6 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
   // TODO: Ben updates constraint's possible values
 }
 
-// Initializes the possible values for a line constraint
-void initLinePossibles(possible_t* possibles) {
-  int i;
-  possibles->num = problemSize;
-  for (i = 1; i <= problemSize; i++)
-    possibles->flags[i] = POSSIBLE;
-}
-
 // Initializes a row constraint for the given row
 void initRowConstraint(constraint_t* constraint, int row) {
   int i;
@@ -391,12 +368,12 @@ void initRowConstraint(constraint_t* constraint, int row) {
   constraint->numCells = 0;
 
   initLinePossibles(&constraint->possibles);
-  for (i = 0; i < problemSize; i++) {
+  for (i = 0; i < N; i++) {
     // Increment number of cells
     constraint->numCells++;
 
     // Add row constraint to cell
-    cell = &cells[GET_INDEX(row, i, problemSize)];
+    cell = &cells[GET_CELL(row, i)];
     cells->constraints[ROW_CONSTRAINT_INDEX] = constraint;
   }
 }
@@ -411,14 +388,44 @@ void initColumnConstraint(constraint_t* constraint, int col) {
   constraint->numCells = 0;
 
   initLinePossibles(&constraint->possibles);
-  for (i = 0; i < problemSize; i++) {
+  for (i = 0; i < N; i++) {
     // Increment number of cells
     constraint->numCells++;
 
     // Add col constraint to cell
-    cell = &cells[GET_INDEX(i, col, problemSize)];
+    cell = &cells[GET_CELL(i, col)];
     cell->constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
   }
+}
+
+// Initialize possibles for a line constraint
+void initLinePossibles(possible_t* possibles) {
+  printf("Initialize line possibles\n");
+}
+
+// Initialize possibles for plus a constraint
+void initPlusPossibles(possible_t* possibles, long value, int numCells) {
+  printf("Initialize plus possibles: %ld, %d\n", value, numCells);
+}
+
+// Initialize possibles for a minus constraint
+void initMinusPossibles(possible_t* possibles, long value, int numCells) {
+  printf("Initialize minus possibles: %ld, %d\n", value, numCells);
+}
+
+// Initialize possibles for a multiply constraint
+void initMultiplyPossibles(possible_t* possibles, long value, int numCells) {
+  printf("Initialize multiply possibles: %ld, %d\n", value, numCells);
+}
+
+// Initialize possibles for a divide constraint
+void initDividePossibles(possible_t* possibles, long value, int numCells) {
+  printf("Initialize divide possibles: %ld, %d\n", value, numCells);
+}
+
+// Initialize possibles for a single constraint
+void initSinglePossibles(possible_t* possibles, long value, int numCells) {
+  printf("Initialize single possibles: %ld, %d\n", value, numCells);
 }
 
 // Print usage information and exit
