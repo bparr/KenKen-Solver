@@ -19,6 +19,7 @@
 
 #define MAX_LINE_LEN 2048
 
+// TODO remove
 #define ROW_CONSTRAINT_INDEX 0
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
@@ -52,25 +53,26 @@ typedef struct constraint {
 typedef struct cell {
   int value;
   possible_t possibles;
-  struct constraint* constraints[CONSTRAINT_NUM];
+  constraint_t* constraints[CONSTRAINT_NUM];
 } cell_t;
 
-// Definitions for possible_t functions
-void initializeLinePossibles(possible_t* possible);
-
-// TODO: fill in from Ben
-void initializePlusPossibles();
-void initializeMinusPossibles();
-void initializeDividePossibles();
-void initializeMultPossibles();
-void initializeLinePossibles();
-void initializeSinglePossibles();
-
-// Definitions for constraint_t functions
+// Funtions to create constraints
+// TODO make like createBlockConstraint
 void initRowConstraint(constraint_t* constraint, int row);
-void initColConstraint(constraint_t* constraint, int col);
+void initColumnConstraint(constraint_t* constraint, int col);
+constraint_t* createBlockConstraint(char type, long value, int numCells);
+                               
+// Functions to initialize constraint possibles
+// TODO: fill in from Ben
+void initLinePossibles(possible_t* possibles);
+void initPlusPossibles(possible_t* possibles, long value, int numCells);
+void initMinusPossibles(possible_t* possibles, long value, int numCells);
+void initMultiplyPossibles(possible_t* possibles, long value, int numCells);
+void initDividePossibles(possible_t* possibles, long value, int numCells);
+void initSinglePossibles(possible_t* possibles, long value, int numCells);
 
 // Algorithm functions
+// TODO merge some of these functions?
 int solve(int step);
 int findNextCell();
 void assignValue(cell_t* cell, int value);
@@ -151,7 +153,7 @@ int main(int argc, char **argv)
 
   // Initialize column constraints
   for (i = 0; i < problemSize; i++)
-    initColConstraint(&constraints[index++], i);
+    initColumnConstraint(&constraints[index++], i);
 
   // Read in block constraints
   for (i = 0; i < numCages; i++) {
@@ -206,7 +208,7 @@ int main(int argc, char **argv)
 
     // Adjust possible list for constraint
     // TODO: fix for block constraints
-    initializeLinePossibles(&constraint->possibles);
+    initLinePossibles(&constraint->possibles);
   }
 
   // TODO: validation check to see if all cells are accounted for?
@@ -371,12 +373,12 @@ void removeCell(constraint_t* constraint, cell_t* cell, int value) {
   // TODO: Ben updates constraint's possible values
 }
 
-// Initializes the possible values for a line
-void initializeLinePossibles(possible_t* possible) {
+// Initializes the possible values for a line constraint
+void initLinePossibles(possible_t* possibles) {
   int i;
-  possible->num = problemSize;
+  possibles->num = problemSize;
   for (i = 1; i <= problemSize; i++)
-    possible->flags[i] = POSSIBLE;
+    possibles->flags[i] = POSSIBLE;
 }
 
 // Initializes a row constraint for the given row
@@ -388,7 +390,7 @@ void initRowConstraint(constraint_t* constraint, int row) {
   constraint->value = -1;
   constraint->numCells = 0;
 
-  initializeLinePossibles(&constraint->possibles);
+  initLinePossibles(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
     // Increment number of cells
     constraint->numCells++;
@@ -400,7 +402,7 @@ void initRowConstraint(constraint_t* constraint, int row) {
 }
 
 // Initializes a column constraint for the given column
-void initColConstraint(constraint_t* constraint, int col) {
+void initColumnConstraint(constraint_t* constraint, int col) {
   int i;
   cell_t* cell;
 
@@ -408,7 +410,7 @@ void initColConstraint(constraint_t* constraint, int col) {
   constraint->value = -1;
   constraint->numCells = 0;
 
-  initializeLinePossibles(&constraint->possibles);
+  initLinePossibles(&constraint->possibles);
   for (i = 0; i < problemSize; i++) {
     // Increment number of cells
     constraint->numCells++;
