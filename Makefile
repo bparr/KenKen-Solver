@@ -4,7 +4,7 @@ debug: debug.kenken
 
 CC = gcc
 CFLAGS = -O
-DEBUGFLAGS = -g
+DEBUGFLAGS = -g -Wall -Werror
 
 kenken: kenken.c
 	$(CC) $(CFLAGS) $< -o $@
