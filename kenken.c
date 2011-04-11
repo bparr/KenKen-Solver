@@ -126,6 +126,8 @@ cell_t* cells;
 int numConstraints;
 // Constraints array
 constraint_t* constraints;
+// Max number by multiplying
+long* maxMultiply;
 
 int main(int argc, char **argv)
 {
@@ -163,6 +165,21 @@ int main(int argc, char **argv)
   constraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
   if (!constraints)
     unixError("Failed to allocate memory for the constraints");
+
+  maxMultiply = (long*)calloc(sizeof(long), totalNumCells);
+  if (!maxMultiply)
+    unixError("Failed to allocate memory for the max multiply array");
+
+  // Initialize max multiply array
+  for (i = 0, value = 1; i < totalNumCells; i++) {
+    maxMultiply[i] = value;
+
+    if (value > LONG_MAX / N)
+      break;
+    value *= N;
+  }
+  for (; i < totalNumCells; i++)
+    maxMultiply[i] = LONG_MAX;
 
   // Initialize row and column constraints
   for (i = 0; i < N; i++) {
@@ -244,6 +261,7 @@ int main(int argc, char **argv)
   // Free allocated memory
   free(cells);
   free(constraints);
+  free(maxMultiply);
 
   return 0;
 }
@@ -561,7 +579,14 @@ void initMultiplyPossibles(possible_t* possibles, long value, int numCells) {
   int i, num = 0;
 
   memset(possibles->flags, IMPOSSIBLE, N + 1);
-  for (i = 1; i <= MIN(value, N); i++) {
+
+  if (numCells == 0) {
+    possibles->num = num;
+    return;
+  }
+
+  long maxLeft = maxMultiply[numCells - 1];
+  for (i = MAX(1, value / maxLeft); i <= MIN(value, N); i++) {
     if (value % i == 0) {
       possibles->flags[i] = POSSIBLE;
       num++;
