@@ -44,10 +44,8 @@ typedef enum {
   LINE,
   PLUS,
   MINUS,
-  PARTIAL_MINUS,
   MULTIPLY,
   DIVIDE,
-  PARTIAL_DIVIDE,
   SINGLE // TODO remove?? SINGLE should be a degenerate case of PLUS
 } type_t;
 
@@ -88,11 +86,11 @@ void initColumnConstraint(constraint_t* constraint, int col);
 void initCellPossibles(cell_t* cell);
 void initLinePossibles(possible_t* possibles);
 void initPlusPossibles(possible_t* possibles, long value, int numCells);
-void initMinusPossibles(possible_t* possibles, long value, int numCells);
+void initMinusPossibles(possible_t* possibles, long value);
 void initPartialMinusPossibles(possible_t* possibles, long value,
                                int cellValue);
 void initMultiplyPossibles(possible_t* possibles, long value, int numCells);
-void initDividePossibles(possible_t* possibles, long value, int numCells);
+void initDividePossibles(possible_t* possibles, long value);
 void initPartialDividePossibles(possible_t* possibles, long value,
                                 int cellValue);
 void initMultiplyPossibles(possible_t* possibles, long value, int numCells);
@@ -102,8 +100,8 @@ void initSinglePossibles(possible_t* possibles, long value, int numCells);
 int solve(int step);
 void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
                           char* newFlags);
-void removeCell(constraint_t* constraint, int cellIndex, int cellValue);
-void addCell(constraint_t* constraint, int cellIndex, int cellValue);
+void updateConstraint(constraint_t* constraint, int oldCellValue,
+                      int newCellValue);
 
 // Cell list functions
 inline void initList(celllist_t* cellList);
@@ -226,7 +224,7 @@ int main(int argc, char **argv)
         break;
       case '-':
         constraint->type = MINUS;
-        initMinusPossibles(&(constraint->possibles), value, numCells);
+        initMinusPossibles(&(constraint->possibles), value);
         break;
       case 'x':
         constraint->type = MULTIPLY;
@@ -234,7 +232,7 @@ int main(int argc, char **argv)
         break;
       case '/':
         constraint->type = DIVIDE;
-        initDividePossibles(&(constraint->possibles), value, numCells);
+        initDividePossibles(&(constraint->possibles), value);
         break;
       case '!':
         constraint->type = SINGLE;
@@ -268,9 +266,10 @@ int main(int argc, char **argv)
 
 // Main recursive function used to solve the program
 int solve(int step) {
-  int i, j, numPossibles;
+  int i, j, numPossibles, oldValue = UNASSIGNED_VALUE;
   int minIndex = 0, minPossibles = INT_MAX;
   cell_t* cell;
+  constraint_t* constraint;
 
   // Success if all cells filled in
   if (step == totalNumCells)
@@ -299,6 +298,13 @@ int solve(int step) {
   // Use the found cell as the next cell to fill
   cell = &(cells[minIndex]);
 
+  // Remove cell from its constraints
+  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
+    constraint = cell->constraints[i];
+    --(constraint->numCells);
+    removeNode(&(constraint->cellList), minIndex);
+  }
+
   // Try all possible values for next cell
   for (i = N; i > 0; i--) {
     if (cell->possibles.flags[i] != POSSIBLE)
@@ -306,17 +312,23 @@ int solve(int step) {
 
     cell->value = i;
 
-    // Remove cell from its constraints
     for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
-      removeCell(cell->constraints[j], minIndex, i);
+      updateConstraint(cell->constraints[j], oldValue, i);
+    oldValue = i;
 
     if (solve(step + 1))
       return 1;
+  }
 
-    // Add cell back to its constraints
-    // TODO optimization: avoid adding cell back just to remove it?
-    for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
-      addCell(cell->constraints[j], minIndex, i);
+  // Add cell back to its constraints
+  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
+    constraint = cell->constraints[i];
+    ++(constraint->numCells);
+    updateConstraint(constraint, oldValue, UNASSIGNED_VALUE);
+
+    // Add cell back to cell list after updating constraint so cell's
+    // possibles are not changed during the update
+    addNode(&(constraint->cellList), minIndex);
   }
 
   // Unassign value and fail if none of possibilities worked
@@ -353,106 +365,75 @@ void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
   }
 }
 
-
-// Remove a cell with certain value from a constraint
-void removeCell(constraint_t* constraint, int cellIndex, int cellValue) {
-  int numCells = --(constraint->numCells);
+void updateConstraint(constraint_t* constraint, int oldCellValue,
+                      int newCellValue) {
+  int numCells = constraint->numCells;
   long value = constraint->value;
 
+  // TODO optimize away
   possible_t* possibles = &(constraint->possibles);
   possible_t originalPossibles;
   memcpy(&originalPossibles, possibles, sizeof(possible_t));
 
   switch (constraint->type) {
     case LINE:
-      possibles->flags[cellValue] = IMPOSSIBLE;
-      possibles->num--;
+      if (oldCellValue != UNASSIGNED_VALUE) {
+        possibles->flags[oldCellValue] = POSSIBLE;
+        possibles->num++;
+      }
+
+      if (newCellValue != UNASSIGNED_VALUE) {
+        possibles->flags[newCellValue] = IMPOSSIBLE;
+        possibles->num--;
+      }
       break;
 
     case PLUS:
-      value -= cellValue;
+      if (oldCellValue != UNASSIGNED_VALUE)
+        value += oldCellValue;
+      if (newCellValue != UNASSIGNED_VALUE)
+        value -= newCellValue;
+
       constraint->value = value;
       initPlusPossibles(possibles, value, numCells);
       break;
 
     case MINUS:
-      constraint->type = PARTIAL_MINUS;
-      initPartialMinusPossibles(possibles, value, cellValue);
+      if (numCells == 2)
+        initMinusPossibles(possibles, value);
+      else if (newCellValue != UNASSIGNED_VALUE && numCells == 1)
+        initPartialMinusPossibles(possibles, value, newCellValue);
+
+      // Don't update possibles when numCells = 0 (no need) so undoing is easier
       break;
 
     case MULTIPLY:
-      value /= cellValue;
+      if (oldCellValue != UNASSIGNED_VALUE)
+        value *= oldCellValue;
+      if (newCellValue != UNASSIGNED_VALUE)
+        value /= newCellValue;
+
       constraint->value = value;
       initMultiplyPossibles(possibles, value, numCells);
       break;
 
     case DIVIDE:
-      constraint->type = PARTIAL_DIVIDE;
-      initPartialDividePossibles(possibles, value, cellValue);
+      if (numCells == 2)
+        initDividePossibles(possibles, value);
+      else if (newCellValue != UNASSIGNED_VALUE && numCells == 1)
+        initPartialDividePossibles(possibles, value, newCellValue);
+
+      // Don't update possibles when numCells = 0 (no need) so undoing is easier
       break;
 
     case SINGLE:
-      value -= cellValue;
+      if (oldCellValue != UNASSIGNED_VALUE)
+        value += oldCellValue;
+      if (newCellValue != UNASSIGNED_VALUE)
+        value -= newCellValue;
+
       constraint->value = value;
-      initSinglePossibles(possibles, constraint->value, numCells);
-      break;
-
-    default:
-      break;
-  }
-
-  // Remove cell from constraints list, so it isn't modified anymore
-  removeNode(&(constraint->cellList), cellIndex);
-  updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
-}
-
-// Add a cell with a specific value to a constraint
-void addCell(constraint_t* constraint, int cellIndex, int cellValue) {
-  int numCells = ++(constraint->numCells);
-  long value = constraint->value;
-
-  possible_t* possibles = &(constraint->possibles);
-  possible_t originalPossibles;
-  memcpy(&originalPossibles, possibles, sizeof(possible_t));
-
-
-  switch (constraint->type) {
-    case LINE:
-      possibles->flags[cellValue] = POSSIBLE;
-      possibles->num++;
-      break;
-
-    case PLUS:
-      value += cellValue;
-      constraint->value = value;
-      initPlusPossibles(possibles, value, numCells);
-      break;
-
-    case PARTIAL_MINUS:
-      if (numCells == 2) { // TODO macroify
-        constraint->type = MINUS;
-        initMinusPossibles(possibles, value, numCells);
-      }
-      break;
-
-
-    case MULTIPLY:
-      value *= cellValue;
-      constraint->value = value;
-      initMultiplyPossibles(possibles, value, numCells);
-      break;
-
-    case PARTIAL_DIVIDE:
-      if (numCells == 2) { // TODO macroify
-        constraint->type = DIVIDE;
-        initDividePossibles(possibles, value, numCells);
-      }
-      break;
-
-    case SINGLE:
-      value += cellValue;
-      constraint->value = value;
-      initSinglePossibles(possibles, constraint->value, numCells);
+      initSinglePossibles(possibles, value, numCells);
       break;
 
     default:
@@ -460,9 +441,6 @@ void addCell(constraint_t* constraint, int cellIndex, int cellValue) {
   }
 
   updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
-  // Add cell back after updating cells, so its possibles aren't modified
-  addNode(&(constraint->cellList), cellIndex);
-
 }
 
 // Initializes a row constraint for the given row
@@ -542,7 +520,7 @@ void initPlusPossibles(possible_t* possibles, long value, int numCells) {
 }
 
 // Initialize possibles for a minus constraint
-void initMinusPossibles(possible_t* possibles, long value, int numCells) {
+void initMinusPossibles(possible_t* possibles, long value) {
   int i;
 
   // Impossibles = [N - value + 1, value], everything else possible
@@ -597,7 +575,7 @@ void initMultiplyPossibles(possible_t* possibles, long value, int numCells) {
 }
 
 // Initialize possibles for a divide constraint
-void initDividePossibles(possible_t* possibles, long value, int numCells) {
+void initDividePossibles(possible_t* possibles, long value) {
   int i, num = 0;
 
   memset(possibles->flags, IMPOSSIBLE, N + 1);
