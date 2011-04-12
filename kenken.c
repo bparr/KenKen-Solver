@@ -109,8 +109,6 @@ int solve(int step);
 void updateConstraint(constraint_t* constraint, int oldCellValue,
                       int oldNumCells, int newCellValue, int newNumCells);
 void notifyCellsOfChange(celllist_t* cellList, int value, char markPossible);
-void notifyCellsOfPossible(celllist_t* cellList, int value);
-void notifyCellsOfImpossible(celllist_t* cellList, int value);
 
 // Cell list functions
 inline void initList(celllist_t* cellList);
@@ -356,32 +354,25 @@ int solve(int step) {
 // TODO make instead notifyCellOfNewPossibles?
 // TODO allow updating range of numbers
 void notifyCellsOfChange(celllist_t* cellList, int value, char markPossible) {
-  if (markPossible)
-    notifyCellsOfPossible(cellList, value);
-  else
-    notifyCellsOfImpossible(cellList, value);
-}
-
-void notifyCellsOfPossible(celllist_t* cellList, int value) {
   int i;
-  for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
-    cells[i].possibles.flags[value]++;
 
-    if (cells[i].possibles.flags[value] == NUM_CELL_CONSTRAINTS)
-      cells[i].possibles.num++;
+  if (markPossible) {
+    for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
+      cells[i].possibles.flags[value]++;
+
+      if (cells[i].possibles.flags[value] == NUM_CELL_CONSTRAINTS)
+        cells[i].possibles.num++;
+    }
+  }
+  else{
+    for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
+      if (cells[i].possibles.flags[value] == NUM_CELL_CONSTRAINTS)
+        cells[i].possibles.num--;
+
+      cells[i].possibles.flags[value]--;
+    }
   }
 }
-
-void notifyCellsOfImpossible(celllist_t* cellList, int value) {
-  int i;
-  for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
-    if (cells[i].possibles.flags[value] == NUM_CELL_CONSTRAINTS)
-      cells[i].possibles.num--;
-
-    cells[i].possibles.flags[value]--;
-  }
-}
-
 
 void updateConstraint(constraint_t* constraint, int oldCellValue,
                       int oldNumCells, int newCellValue, int newNumCells) {
@@ -470,15 +461,15 @@ void initColumnConstraint(constraint_t* constraint, int col) {
 void initLineCells(celllist_t* cellList) {
   int i;
   for (i = 1; i <= N; i++)
-    notifyCellsOfPossible(cellList, i);
+    notifyCellsOfChange(cellList, i, 1);
 }
 
 void updateLineCells(celllist_t* cellList, int oldCellValue, int newCellValue) {
   if (oldCellValue != UNASSIGNED_VALUE)
-    notifyCellsOfPossible(cellList, oldCellValue);
+    notifyCellsOfChange(cellList, oldCellValue, 1);
 
   if (newCellValue != UNASSIGNED_VALUE)
-    notifyCellsOfImpossible(cellList, newCellValue);
+    notifyCellsOfChange(cellList, newCellValue, 0);
 }
 
 void initPlusCells(celllist_t* cellList, long value, int numCells) {
@@ -488,7 +479,7 @@ void initPlusCells(celllist_t* cellList, long value, int numCells) {
 
   // Possibles = [start, end], everything else impossible
   for (i = start; i <= end; i++)
-    notifyCellsOfPossible(cellList, i);
+    notifyCellsOfChange(cellList, i, 1);
 }
 
 void updatePlusCells(celllist_t* cellList, long oldValue,
@@ -503,15 +494,15 @@ void updatePlusCells(celllist_t* cellList, long oldValue,
 
   // Notify of new impossibles from start/end changes
   for (i = oldStart; i < newStart ; i++)
-   notifyCellsOfImpossible(cellList, i);
+   notifyCellsOfChange(cellList, i, 0);
   for (i = newEnd + 1; i <= oldEnd; i++)
-   notifyCellsOfImpossible(cellList, i);
+   notifyCellsOfChange(cellList, i, 0);
 
   // Notify of new possibles from start/end changes
   for (i = newStart; i < oldStart; i++)
-   notifyCellsOfPossible(cellList, i);
+   notifyCellsOfChange(cellList, i, 1);
   for (i = oldEnd + 1; i <= newEnd; i++)
-   notifyCellsOfPossible(cellList, i);
+   notifyCellsOfChange(cellList, i, 1);
 }
 
 void initMinusCells(celllist_t* cellList, long value) {
@@ -561,7 +552,7 @@ void initMultiplyCells(celllist_t* cellList, long value, int numCells) {
   long maxLeft = maxMultiply[numCells - 1];
   for (i = MAX(1, value / maxLeft); i <= MIN(value, N); i++) {
     if (value % i == 0)
-      notifyCellsOfPossible(cellList, i);
+      notifyCellsOfChange(cellList, i, 1);
   }
 }
 
@@ -634,10 +625,7 @@ void initSingleCells(celllist_t* cellList, long value) {
 }
 
 void updateSingleCells(celllist_t* cellList, int value, int numCells) {
-  if (numCells == 1)
-    notifyCellsOfPossible(cellList, value);
-  else
-    notifyCellsOfImpossible(cellList, value);
+  notifyCellsOfChange(cellList, value, (numCells == 1));
 }
 
 // Initialize a cell list
