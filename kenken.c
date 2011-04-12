@@ -16,13 +16,11 @@
 
 // Value used to indicate a cell's value is unassigned
 #define UNASSIGNED_VALUE 0
-// Number of constraints a cell has (1 row constraint, 1 column constraint,
-// 1 block constraint)
-#define NUM_CELL_CONSTRAINTS 3
 // Value of node at start and end of cell list
 #define END_NODE -1
 
-// Indexes of different types of constraints in cell_t constraint array
+// Different types of constraints in cell_t constraint array
+#define NUM_CELL_CONSTRAINTS 3
 #define ROW_CONSTRAINT_INDEX 0
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
