@@ -130,8 +130,7 @@ constraint_t* constraints;
 // Max number by multiplying
 long* maxMultiply;
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   FILE* in;
   char type, lineBuf[MAX_LINE_LEN];
   char* ptr;
@@ -244,7 +243,8 @@ int main(int argc, char **argv)
     }
   }
 
-  // TODO close file
+  // Close file
+  fclose(in);
 
   // Run algorithm
   if (!solve(0))
