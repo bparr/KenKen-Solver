@@ -41,11 +41,6 @@ typedef enum {
   SINGLE
 } type_t;
 
-typedef struct possible { // TODO merge into cell, and rename to intersection?
-  char flags[MAX_PROBLEM_SIZE + 1];
-  int num;
-} possible_t;
-
 typedef struct cellnode {
   int previous;
   int next;
@@ -65,7 +60,8 @@ typedef struct constraint {
 
 typedef struct cell {
   int value;
-  possible_t possibles;
+  int numPossibles;
+  char possibles[MAX_PROBLEM_SIZE + 1];
   constraint_t* constraints[NUM_CELL_CONSTRAINTS];
 } cell_t;
 
@@ -290,7 +286,7 @@ int solve(int step) {
     if (cell->value != UNASSIGNED_VALUE)
       continue;
 
-    numPossibles = cell->possibles.num;
+    numPossibles = cell->numPossibles;
 
     // Fail early if found unassigned cell with no possibilities
     if (numPossibles == 0)
@@ -318,7 +314,7 @@ int solve(int step) {
 
   // Try all possible values for next cell
   for (i = N; i > 0; i--) {
-    if (cell->possibles.flags[i] != NUM_CELL_CONSTRAINTS)
+    if (cell->possibles[i] != NUM_CELL_CONSTRAINTS)
       continue;
 
     cell->value = i;
@@ -357,13 +353,13 @@ void notifyCellsOfChange(celllist_t* cellList, int value, char markPossible) {
   int i, flag;
 
   for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
-    flag = cells[i].possibles.flags[value];
+    flag = cells[i].possibles[value];
     if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
-      cells[i].possibles.num++;
+      cells[i].numPossibles++;
     else if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
-      cells[i].possibles.num--;
+      cells[i].numPossibles--;
 
-    cells[i].possibles.flags[value] = flag + (markPossible ? 1 : -1);
+    cells[i].possibles[value] = flag + (markPossible ? 1 : -1);
   }
 }
 
@@ -375,19 +371,19 @@ void notifyCellsOfChanges(celllist_t* cellList, int start, int end,
     return;
 
   for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
-    num = cells[i].possibles.num;
+    num = cells[i].numPossibles;
 
     for (j = start; j <= end; j++) {
-      flag = cells[i].possibles.flags[j];
+      flag = cells[i].possibles[j];
       if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
         num++;
       if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
         num--;
 
-      cells[i].possibles.flags[j] = flag + (markPossible ? 1 : -1);
+      cells[i].possibles[j] = flag + (markPossible ? 1 : -1);
     }
 
-    cells[i].possibles.num = num;
+    cells[i].numPossibles = num;
   }
 }
 
