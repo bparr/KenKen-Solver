@@ -120,9 +120,7 @@ int runParallel() {
   // Begin finding jobs and running algorithm
   #pragma omp single nowait
   {
-		printf("%d is filling jobs\n", omp_get_thread_num());
     fillJobs(0, myJob, myCells, myConstraints, &queueTail, &queueHead, &found);
-		printf("fillJobs returned\n");
     // After filling jobs, thread should go and help compute remaining jobs
   }
 
@@ -135,12 +133,14 @@ int runParallel() {
     {
       // Will hog critical section but this is ok because no processor
       // should continue if there are no jobs available. All should wait
-      while (queueHead == queueTail);
+      while (!found && queueHead == queueTail);
 
       // Copy over job
       memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
       queueHead = INCREMENT(queueHead);
     }
+
+		printf ("%d beginning a job\n", omp_get_thread_num());
 
     // Apply job: Note that cellIndices align properly with system state
     // of cell/constraint modifications because the method for achieving their
@@ -160,9 +160,7 @@ int runParallel() {
 
     // Begin computation
     if (solve(step, myCells, myConstraints, &found)) {
-      // Set found
-			printf("Thread %d found solution:\n", omp_get_thread_num());
-
+			printf("thread %d found a solution!!\n", omp_get_thread_num());
       // Copy answer to global cells
       #pragma omp single nowait
       {
@@ -175,6 +173,7 @@ int runParallel() {
         memcpy(cells, myCells, totalNumCells * sizeof(cell_t));
       }
 
+      // Set found
       found = 1;
       break;
     }
@@ -194,7 +193,6 @@ int runParallel() {
 
   } // While closing brace
  
- 	printf("Thread waiting to exit because found = %d\t\t\t%d\n", found, omp_get_thread_num());
   // Deallocate resources
   free(myJob);
   free(myConstraints);
@@ -209,24 +207,17 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
   int i, oldValue = UNASSIGNED_VALUE;
   cell_t* cell; 
   int nextCellIndex;
-	printf("%d fillJobs beginning: %d\n", step, *found);
  
-  if (*found) {
-		printf("%d fillJobs returning b/c of found == %d\n", step, *found);
+  if (*found)
     return 1;
-	}
 
   if (step == jobLength) {
-		printf("step == jobLength! %d == %d", step, jobLength);
     // Loop while buffer is full and no solution is found
     while (!(*found) && INCREMENT(*tail) == *head)
-			printf("waiting endlessly? %d\n", *found);
 
     // If we exited while because solution was found, exit
-    if (*found) {
-			printf("%d fillJobs returning b/c of found == %d\n", step, *found);
+    if (*found) 
       return 1;
-		}
 
     // Spot in the buffer freed up so set value as current job
     memcpy(&jobs[GET_JOB(*tail)], myJob, sizeof(job_t) * jobLength);
@@ -235,14 +226,13 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     return 0;
   }
 
-  nextCellIndex = findNextCell(cells);
+  nextCellIndex = findNextCell(myCells);
 
   if (nextCellIndex < 0)
     return 0;
 
   // Use the found cell as the next cell to fill
   cell = &(myCells[nextCellIndex]);
- 	printf("removing cell from constraints\n");
 
   // Remove cell from its constraints
   removeCellFromConstraints(myConstraints, cell, nextCellIndex);
@@ -258,15 +248,11 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     
     // Set job values
     applyValue(myCells, myConstraints, cell, &oldValue, i);
-		printf("%d is doing something hopefully\n", omp_get_thread_num());
     
-    if (fillJobs(step + 1, myJob, myCells, myConstraints, tail, head, found)) {
-			printf("%d fillJobs returning b/c of found == %d\n", step, *found);
+    if (fillJobs(step + 1, myJob, myCells, myConstraints, tail, head, found))
       return 1;
-		}
   }
  
- 	printf"%d restoring cell to constraints\n", step);
   // Restore cell to its constraints
   restoreCellToConstraints(myCells, myConstraints, cell, nextCellIndex, oldValue);
 
@@ -285,12 +271,10 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints, int* found) {
   cell_t* cell;
 
   // Success if all cells filled in. Or if another processor found a solution
-  if (step == totalNumCells || *found == 1) {
-		printf("\n\n\nsolve has found the solution!!!!!! %d == %d or %d == 1\n\n\n", step, totalNumCells, *found);
+  if (step == totalNumCells || *found == 1)
     return 1;
-	}
 
-  nextCellIndex = findNextCell(cells);
+  nextCellIndex = findNextCell(myCells);
 
   if (nextCellIndex < 0)
     return 0;
