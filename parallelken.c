@@ -94,24 +94,6 @@ typedef struct job {
   int value;
 } job_t;
 
-// Funtions to initialize line constraints
-void initRowConstraint(constraint_t* constraint, int row);
-void initColumnConstraint(constraint_t* constraint, int col);
-
-// Functions to initialize possibles
-void initCellPossibles(cell_t* cell);
-void initLinePossibles(possible_t* possibles);
-void initPlusPossibles(possible_t* possibles, long value, int numCells);
-void initMinusPossibles(possible_t* possibles, long value);
-void initPartialMinusPossibles(possible_t* possibles, long value,
-                               int cellValue);
-void initMultiplyPossibles(possible_t* possibles, long value, int numCells);
-void initDividePossibles(possible_t* possibles, long value);
-void initPartialDividePossibles(possible_t* possibles, long value,
-                                int cellValue);
-void initMultiplyPossibles(possible_t* possibles, long value, int numCells);
-void initSinglePossibles(possible_t* possibles, long value, int numCells);
-
 // Algorithm functions
 int runParallel();
 int fillJobs(int step);
@@ -119,21 +101,6 @@ int solve(int step);
 void removeCellFromConstraints(cell_t* cell, int cellIndex);
 void applyValue(cell_t* cell, int* oldValue, int newValue);
 void restoreCellToConstraints(cell_t* cell, int cellIndex, int oldValue);
-void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
-                          char* newFlags);
-void updateConstraint(constraint_t* constraint, int oldCellValue,
-                      int newCellValue);
-
-// Cell list functions
-inline void initList(celllist_t* cellList);
-inline void addNode(celllist_t* cellList, int node);
-inline void removeNode(celllist_t* cellList, int node);
-
-// Miscellaneous functions
-void usage(char* program);
-void readLine(FILE* in, char* lineBuf);
-void appError(const char* str);
-void unixError(const char* str);
 
 // Problem size
 int N;
@@ -179,113 +146,12 @@ int main(int argc, char **argv)
   // Check arguments
   if (argc != 2)
     usage(argv[0]);
+    
+  constraints = NULL;
+  cells = NULL;
 
-  // Read in file
-  if (!(in = fopen(argv[1], "r")))
-    unixError("Failed to open input file");
-
-  // Read in problem size and number of constraints
-  readLine(in, lineBuf);
-  N = atoi(lineBuf);
-  if (N > MAX_PROBLEM_SIZE)
-    appError("Problem size too large");
-
-  readLine(in, lineBuf);
-  // N row constraints + N column constraints + number of block constraints
-  numConstraints = 2 * N + atoi(lineBuf);
-
-  // Allocate space for cells and constraints
-  totalNumCells = N * N;
-  cells = (cell_t*)calloc(sizeof(cell_t), totalNumCells);
-  if (!cells)
-    unixError("Failed to allocate memory for the cells");
-
-  constraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
-  if (!constraints)
-    unixError("Failed to allocate memory for the constraints");
-
-  maxMultiply = (long*)calloc(sizeof(long), totalNumCells);
-  if (!maxMultiply)
-    unixError("Failed to allocate memory for the max multiply array");
-
-  // Initialize max multiply array
-  for (i = 0, value = 1; i < totalNumCells; i++) {
-    maxMultiply[i] = value;
-
-    if (value > LONG_MAX / N)
-      break;
-    value *= N;
-  }
-  for (; i < totalNumCells; i++)
-    maxMultiply[i] = LONG_MAX;
-
-  // Initialize row and column constraints
-  for (i = 0; i < N; i++) {
-    initRowConstraint(&constraints[i], i);
-    initColumnConstraint(&constraints[i + N], i);
-  }
-
-  // Initialize block constraints
-  for (i = 2 * N; i < numConstraints; i++) {
-    readLine(in, lineBuf);
-    constraint = &(constraints[i]);
-
-    // Read in type
-    ptr = strtok(lineBuf, " ");
-    type = *ptr;
-
-    // Read in value
-    ptr = strtok(NULL, " ");
-    value = atol(ptr);
-
-    // Read in cell coordinates
-    numCells = 0;
-    initList(&(constraint->cellList));
-    while ((ptr = strtok(NULL, ", "))) {
-      numCells++;
-
-      x = atoi(ptr);
-      ptr = strtok(NULL, ", ");
-      y = atoi(ptr);
-
-      // Add block constraint to cell
-      addNode(&(constraint->cellList), GET_CELL(x, y));
-      cells[GET_CELL(x, y)].constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
-    }
-
-    constraint->numCells = numCells;
-    constraint->value = value;
-
-    // Initialize constraint's type and possibles
-    switch (type) {
-      case '+':
-        constraint->type = PLUS;
-        initPlusPossibles(&(constraint->possibles), value, numCells);
-        break;
-      case '-':
-        constraint->type = MINUS;
-        initMinusPossibles(&(constraint->possibles), value);
-        break;
-      case 'x':
-        constraint->type = MULTIPLY;
-        initMultiplyPossibles(&(constraint->possibles), value, numCells);
-        break;
-      case '/':
-        constraint->type = DIVIDE;
-        initDividePossibles(&(constraint->possibles), value);
-        break;
-      case '!':
-        constraint->type = SINGLE;
-        initSinglePossibles(&(constraint->possibles), value, numCells);
-        break;
-      default:
-        appError("Malformed constraint in input file");
-    }
-  }
-
-  // Initialize possibles of cells
-  for (i = 0; i < totalNumCells; i++)
-    initCellPossibles(&(cells[i]));
+  // Initialize global variables and data-structures.
+  initialize(argv[1], &constraints, &cells);
 
   // Initialize job queue (implemented as a circular array)
   // Always keeps one block in the array empty. This is necessary because of
@@ -351,8 +217,6 @@ int runParallel() {
   memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
   memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
 
-  // Fix pointers in the cells to point to the proper constraints
-
   // Begin finding jobs and running algorithm
   #pragma omp single
   {
@@ -400,7 +264,7 @@ int runParallel() {
       found = 1;
 
       // Copy answer to global cells
-      #pragma omp critical
+      #pragma omp single
       {
         // Locked in critical just in case multiple threads found
         // a solution at the same time. (Note: this is only time data is
@@ -440,6 +304,8 @@ int fillJobs(int step) {
   int minIndex = 0, minPossibles = INT_MAX;
   cell_t* cell;
   
+  int nextCellIndex;
+  
   if (found)
     return 1;
 
@@ -458,54 +324,44 @@ int fillJobs(int step) {
     return 0;
   }
 
-  // Find the unassigned cell with the mininum number of possibilities
-  for (i = 0; i < totalNumCells; i++) {
-    cell = &(myCells[i]);
+  // Success if all cells filled in
+  if (step == totalNumCells)
+    return 1;
 
-    // Skip assigned cells
-    if (cell->value != UNASSIGNED_VALUE)
-      continue;
+  int nextCellIndex = findNextCell(cells);
 
-    numPossibles = cell->possibles.num;
-
-    // Fail early if found unassigned cell with no possibilities
-    if (numPossibles == 0)
-      return 0;
-
-    if (numPossibles < minPossibles) {
-      minIndex = i;
-      minPossibles = numPossibles;
-    }
-  }
+  if (nextCellIndex < 0)
+    return 0;
 
   // Use the found cell as the next cell to fill
-  cell = &(myCells[minIndex]);
-
+  cell = &(cells[nextCellIndex]);
+  
   // Remove cell from its constraints
-  removeCellFromConstraints(cell, minIndex);
+  removeCellFromConstraints(cell, nextCellIndex);
 
   // Try all possible values for next cell
   for (i = N; i > 0; i--) {
-    if (cell->possibles.flags[i] != POSSIBLE)
+    if (!IS_POSSIBLE(cell->possibles[i]))
       continue;
 
-    // Store value in job
-    myJob[step].cellIndex = minIndex;
+    // Store job step values
+    myJob[step].cellIndex = nextCellIndex;
     myJob[step].value = i;
-
-    // Apply the value and continue
+    
+    // Set job values
     applyValue(cell, &oldValue, i);
-    if (fillJobs(step + 1))
+    
+    if (fillJobs(step + 1)) 
       return 1;
   }
+  
+  // Restore cell to its constraints
+  restoreCellToConstraints(cell, nextCellIndex, oldValue);
 
-  // Restore a cell's contraints 
-  restoreCellToConstraints(cell, minIndex, oldValue);
-
-  // Reset current job step's values
+  // Reset job step values
   myJob[step].cellIndex = -1;
   myJob[step].value = UNASSIGNED_VALUE;
-  
+
   // Unassign value and fail if none of possibilities worked
   cell->value = UNASSIGNED_VALUE;
   return 0;
@@ -513,75 +369,36 @@ int fillJobs(int step) {
 
 // Main recursive function used to solve the program
 int solve(int step) {
-  int i, numPossibles, oldValue = UNASSIGNED_VALUE;
-  // int j;
-  int minIndex = 0, minPossibles = INT_MAX;
+  int i, j, nextCellIndex, oldValue = UNASSIGNED_VALUE;
   cell_t* cell;
-  // constraint_t* constraint;
+  constraint_t* constraint;
 
-  // Success if all cells filled in
-  if (step == totalNumCells)
+  // Success if all cells filled in. Or if another processor found a solution
+  if (step == totalNumCells || found == 1)
     return 1;
 
-  // Find the unassigned cell with the mininum number of possibilities
-  for (i = 0; i < totalNumCells; i++) {
-    cell = &(myCells[i]);
+  int nextCellIndex = findNextCell(cells);
 
-    // Skip assigned cells
-    if (cell->value != UNASSIGNED_VALUE)
-      continue;
-
-    numPossibles = cell->possibles.num;
-
-    // Fail early if found unassigned cell with no possibilities
-    if (numPossibles == 0)
-      return 0;
-
-    if (numPossibles < minPossibles) {
-      minIndex = i;
-      minPossibles = numPossibles;
-    }
-  }
+  if (nextCellIndex < 0)
+    return 0;
 
   // Use the found cell as the next cell to fill
-  cell = &(myCells[minIndex]);
+  cell = &(cells[nextCellIndex]);
+  
+  removeCellFromConstraints(cell, nextCellIndex);
 
-/*  // Remove cell from its constraints
-  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
-    constraint = cell->constraints[i];
-    --(constraint->numCells);
-    removeNode(&(constraint->cellList), minIndex);
-  }
-*/
-
-  removeCellFromConstraints(cell, minIndex);
   // Try all possible values for next cell
   for (i = N; i > 0; i--) {
-    if (cell->possibles.flags[i] != POSSIBLE)
+    if (!IS_POSSIBLE(cell->possibles[i]))
       continue;
 
-/*    cell->value = i;
-
-    for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
-      updateConstraint(cell->constraints[j], oldValue, i);
-    oldValue = i;
-*/
     applyValue(cell, &oldValue, i);
-    if (solve(step + 1))
+    
+    if (solve(step + 1)) 
       return 1;
   }
-
-  restoreCellToConstraints(cell, minIndex, oldValue);
-/*  // Add cell back to its constraints
-  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
-    constraint = cell->constraints[i];
-    ++(constraint->numCells);
-    updateConstraint(constraint, oldValue, UNASSIGNED_VALUE);
-
-    // Add cell back to cell list after updating constraint so cell's
-    // possibles are not changed during the update
-    addNode(&(constraint->cellList), minIndex);
-  }*/
+  
+  restoreCellToConstraints(cell, nextCellIndex, oldValue);
 
   // Unassign value and fail if none of possibilities worked
   cell->value = UNASSIGNED_VALUE;
@@ -590,25 +407,21 @@ int solve(int step) {
 
 // Remove a cell from its constraints
 void removeCellFromConstraints(cell_t* cell, int cellIndex) {
-  int i;
-  constraint_t* constraint;
-
+  int i
+  
   // Remove cell from its constraints
-  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
-    constraint = cell->constraints[i];
-    --(constraint->numCells);
-    removeNode(&(constraint->cellList), cellIndex);
-  }
+  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++)
+    removeCellFromConstraint(myConstraints[cell->constraints[i]], cellIndex);
 }
 
 // Apply a value to a cell and update constraints
 void applyValue(cell_t* cell, int* oldValue, int newValue) {
-    int j;
-    cell->value = newValue;
+  int j;
+  cell->value = newValue;
 
-    for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
-      updateConstraint(cell->constraints[j], *oldValue, newValue);
-    *oldValue = newValue;
+  for (j = 0; j < NUM_CELL_CONSTRAINTS; j++)
+    updateConstraint(myCells, myConstraints[cell->constraints[j]], *oldValue, newValue);
+  *oldValue = newValue;
 }
 
 // Restore a cell to its constraints
@@ -618,352 +431,11 @@ void restoreCellToConstraints(cell_t* cell, int cellIndex, int oldValue) {
 
   // Add cell back to its constraints
   for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
-    constraint = cell->constraints[i];
-    ++(constraint->numCells);
-    updateConstraint(constraint, oldValue, UNASSIGNED_VALUE);
+    constraint = myConstraints[cell->constraints[i]];
+    updateConstraint(myCells, constraint, oldValue, UNASSIGNED_VALUE);
 
     // Add cell back to cell list after updating constraint so cell's
     // possibles are not changed during the update
-    addNode(&(constraint->cellList), cellIndex);
+    addCellToConstraint(constraint, cellIndex);
   }
 }
-
-// TODO make faster
-void updateCellsPossibles(constraint_t* constraint, char* originalFlags,
-                          char* newFlags) {
-  int i, j;
-  char old;
-  for (i = 1; i <= N; i++) {
-    // Only update possibles that changed
-    if (originalFlags[i] == newFlags[i])
-      continue;
-
-    // Update cells who are in the constraint
-    j = constraint->cellList.start;
-    for (; j != END_NODE; j = (constraint->cellList.cells[j]).next) {
-      old = myCells[j].possibles.flags[i];
-      if (originalFlags[i] == POSSIBLE) {
-        if (old == POSSIBLE)
-          myCells[j].possibles.num--;
-       myCells[j].possibles.flags[i]++;
-      }
-      else {
-        if (old - 1 == POSSIBLE)
-          myCells[j].possibles.num++;
-
-       myCells[j].possibles.flags[i]--;
-      }
-    }
-  }
-}
-
-void updateConstraint(constraint_t* constraint, int oldCellValue,
-                      int newCellValue) {
-  int numCells = constraint->numCells;
-  long value = constraint->value;
-
-  // TODO optimize away
-  possible_t* possibles = &(constraint->possibles);
-  possible_t originalPossibles;
-  memcpy(&originalPossibles, possibles, sizeof(possible_t));
-
-  switch (constraint->type) {
-    case LINE:
-      if (oldCellValue != UNASSIGNED_VALUE) {
-        possibles->flags[oldCellValue] = POSSIBLE;
-        possibles->num++;
-      }
-
-      if (newCellValue != UNASSIGNED_VALUE) {
-        possibles->flags[newCellValue] = IMPOSSIBLE;
-        possibles->num--;
-      }
-      break;
-
-    case PLUS:
-      if (oldCellValue != UNASSIGNED_VALUE)
-        value += oldCellValue;
-      if (newCellValue != UNASSIGNED_VALUE)
-        value -= newCellValue;
-
-      constraint->value = value;
-      initPlusPossibles(possibles, value, numCells);
-      break;
-
-    case MINUS:
-      if (numCells == 2)
-        initMinusPossibles(possibles, value);
-      else if (newCellValue != UNASSIGNED_VALUE && numCells == 1)
-        initPartialMinusPossibles(possibles, value, newCellValue);
-
-      // Don't update possibles when numCells = 0 (no need) so undoing is easier
-      break;
-
-    case MULTIPLY:
-      if (oldCellValue != UNASSIGNED_VALUE)
-        value *= oldCellValue;
-      if (newCellValue != UNASSIGNED_VALUE)
-        value /= newCellValue;
-
-      constraint->value = value;
-      initMultiplyPossibles(possibles, value, numCells);
-      break;
-
-    case DIVIDE:
-      if (numCells == 2)
-        initDividePossibles(possibles, value);
-      else if (newCellValue != UNASSIGNED_VALUE && numCells == 1)
-        initPartialDividePossibles(possibles, value, newCellValue);
-
-      // Don't update possibles when numCells = 0 (no need) so undoing is easier
-      break;
-
-    case SINGLE:
-      if (oldCellValue != UNASSIGNED_VALUE)
-        value += oldCellValue;
-      if (newCellValue != UNASSIGNED_VALUE)
-        value -= newCellValue;
-
-      constraint->value = value;
-      initSinglePossibles(possibles, value, numCells);
-      break;
-
-    default:
-      break;
-  }
-
-  updateCellsPossibles(constraint, originalPossibles.flags, possibles->flags);
-}
-
-// Initializes a row constraint for the given row
-void initRowConstraint(constraint_t* constraint, int row) {
-  int i;
-
-  constraint->type = LINE;
-  constraint->value = -1;
-  constraint->numCells = N;
-  initLinePossibles(&constraint->possibles);
-
-  // Add constraint to its cells
-  initList(&(constraint->cellList));
-  for (i = 0; i < N; i++) {
-    addNode(&(constraint->cellList), GET_CELL(row, i));
-    myCells[GET_CELL(row, i)].constraints[ROW_CONSTRAINT_INDEX] = constraint;
-  }
-}
-
-// Initializes a column constraint for the given column
-void initColumnConstraint(constraint_t* constraint, int col) {
-  int i;
-
-  constraint->type = LINE;
-  constraint->value = -1;
-  constraint->numCells = N;
-  initLinePossibles(&constraint->possibles);
-
-  // Add constraint to its cells
-  initList(&(constraint->cellList));
-  for (i = 0; i < N; i++) {
-    addNode(&(constraint->cellList), GET_CELL(i, col));
-    myCells[GET_CELL(i, col)].constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
-  }
-}
-
-// Initialize possibles for a cell
-void initCellPossibles(cell_t* cell) {
-  int i, j, num = 0;
-
-  memset(cell->possibles.flags, IMPOSSIBLE, N + 1);
-
-  for (i = 1; i <= N; i++) {
-    for (j = 0; j < NUM_CELL_CONSTRAINTS; j++) {
-      if (cell->constraints[j]->possibles.flags[i] != POSSIBLE)
-        break;
-    }
-
-    // Mark possible if possible in all of its constraints
-    if (j == NUM_CELL_CONSTRAINTS) {
-      num++;
-      cell->possibles.flags[i] = POSSIBLE;
-    }
-  }
-
-  cell->possibles.num = num;
-}
-
-// Initialize possibles for a line constraint
-void initLinePossibles(possible_t* possibles) {
-  possibles->num = N;
-  memset(possibles->flags, POSSIBLE, N + 1);
-}
-
-// Initialize possibles for plus a constraint
-void initPlusPossibles(possible_t* possibles, long value, int numCells) {
-  int i;
-  int rangeMin = MAX(1, value - N * (numCells - 1));
-  int rangeMax = MIN(N, value - (numCells - 1));
-
-  // Possibles = [rangeMin, rangeMax], everything else impossible
-  memset(possibles->flags, IMPOSSIBLE, N + 1);
-  for (i = rangeMin; i <= rangeMax; i++)
-    possibles->flags[i] = POSSIBLE;
-
-  possibles->num = MAX(0, rangeMax - rangeMin + 1);
-}
-
-// Initialize possibles for a minus constraint
-void initMinusPossibles(possible_t* possibles, long value) {
-  int i;
-
-  // Impossibles = [N - value + 1, value], everything else possible
-  memset(possibles->flags, POSSIBLE, N + 1);
-
-  for (i = N - value + 1; i <= value; i++)
-    possibles->flags[i] = IMPOSSIBLE;
-
-  possibles->num = N - MAX(0, 2 * value - N);
-}
-
-// Initialize possibles for a partial minus constraint
-void initPartialMinusPossibles(possible_t* possibles, long value,
-                               int cellValue) {
-  int num = 0;
-
-  memset(possibles->flags, IMPOSSIBLE, N + 1);
-
-  if (cellValue + value <= N) {
-    possibles->flags[cellValue + value] = POSSIBLE;
-    num++;
-  }
-
-  if (cellValue - value > 0) {
-    possibles->flags[cellValue - value] = POSSIBLE;
-    num++;
-  }
-
-  possibles->num = num;
-}
-
-// Initialize possibles for a multiply constraint
-void initMultiplyPossibles(possible_t* possibles, long value, int numCells) {
-  int i, num = 0;
-
-  memset(possibles->flags, IMPOSSIBLE, N + 1);
-
-  if (numCells == 0) {
-    possibles->num = num;
-    return;
-  }
-
-  long maxLeft = maxMultiply[numCells - 1];
-  for (i = MAX(1, value / maxLeft); i <= MIN(value, N); i++) {
-    if (value % i == 0) {
-      possibles->flags[i] = POSSIBLE;
-      num++;
-    }
-  }
-
-  possibles->num = num;
-}
-
-// Initialize possibles for a divide constraint
-void initDividePossibles(possible_t* possibles, long value) {
-  int i, num = 0;
-
-  memset(possibles->flags, IMPOSSIBLE, N + 1);
-  for (i = 1; i <= N / value; i++) {
-    if (possibles->flags[i] != POSSIBLE) {
-      possibles->flags[i] = POSSIBLE;
-      num += 2;
-    }
-    else {
-      // One part of found possible pair was already found
-      num++;
-    }
-
-    // i * value is new (Note: value can't = 1 since 1/ only answer is 1,1
-    // and a divide has either 2 cells on same row or column)
-    possibles->flags[i * value] = POSSIBLE;
-  }
-
-  possibles->num = num;
-}
-
-// Initialize possibles for a partial divide constraint
-void initPartialDividePossibles(possible_t* possibles, long value,
-                               int cellValue) {
-  int num = 0;
-
-  memset(possibles->flags, IMPOSSIBLE, N + 1);
-
-  if (cellValue * value <= N) {
-    possibles->flags[cellValue * value] = POSSIBLE;
-    num++;
-  }
-
-  if ((cellValue % value == 0) && cellValue >= value) {
-    possibles->flags[cellValue / value] = POSSIBLE;
-    num++;
-  }
-
-  possibles->num = num;
-}
-
-// Initialize possibles for a single constraint
-void initSinglePossibles(possible_t* possibles, long value, int numCells) {
-  initPlusPossibles(possibles, value, numCells);
-}
-
-// Initialize a cell list
-inline void initList(celllist_t* cellList) {
-  cellList->start = END_NODE;
-}
-
-// Add node to a cell list
-inline void addNode(celllist_t* cellList, int node) {
-  int start = cellList->start;
-
-  cellList->cells[node].previous = END_NODE;
-  cellList->cells[node].next = start;
-  cellList->start = node;
-
-  if (start != END_NODE)
-    cellList->cells[start].previous = node;
-}
-
-// Remove a node from a cell list
-inline void removeNode(celllist_t* cellList, int node) {
-  int previous = cellList->cells[node].previous;
-  int next = cellList->cells[node].next;
-
-  if (next != END_NODE)
-    cellList->cells[next].previous = previous;
-
-  if (previous == END_NODE)
-    cellList->start = next;
-  else
-    cellList->cells[previous].next = next;
-}
-
-// Print usage information and exit
-void usage(char* program) {
-  printf("Usage: %s filename\n", program);
-  exit(0);
-}
-
-void readLine(FILE* in, char* lineBuf) {
-  if (!fgets(lineBuf, MAX_LINE_LEN, in))
-    unixError("Failed to read line from input file");
-}
-
-void appError(const char* str) {
-  fprintf(stderr, "%s\n", str);
-  exit(1);
-}
-
-// Display a unix error and exit
-void unixError(const char* str) {
-  perror(str);
-  exit(1);
-}
-
