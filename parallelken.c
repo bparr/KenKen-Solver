@@ -9,87 +9,16 @@
  *  @author Jonathan Park (jjp1) and Ben Parr (bparr)
  */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <unistd.h>
+#include "kenken.h"
 #include <omp.h>
 
-// Maximum problem size supported by program
-#define MAX_PROBLEM_SIZE 25
-// Maximum line length of input file
-#define MAX_LINE_LEN 2048
 // Number of processors
 #define P 32
 
-// Value of possible flag indicating it is valid
-#define POSSIBLE 0
-// Value of possible flag to set if invalid. Don't use to check for validity,
-// since flag values can be incremented and decremented. Instead, do
-// (flag == POSSIBLE) to check for validity.
-#define IMPOSSIBLE CHAR_MAX
-// Value used to indicate a cell's value is unassigned
-#define UNASSIGNED_VALUE 0
-// Number of constraints a cell has (1 row constraint, 1 column constraint,
-// 1 block constraint)
-#define NUM_CELL_CONSTRAINTS 3
-// Value of node at start and end of cell list
-#define END_NODE -1
-
-// Indexes of different types of constraints in cell_t constraint array
-#define ROW_CONSTRAINT_INDEX 0
-#define COLUMN_CONSTRAINT_INDEX 1
-#define BLOCK_CONSTRAINT_INDEX 2
-
-// Get cell at (x, y)
-#define GET_CELL(x, y) (N * (x) + (y))
-// Calculate the minimum of two numbers
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-// Calculate the maximum of two numbers
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
 // Index into jobs array
 #define GET_JOB(i) ((i)*(jobLength))
-
-typedef enum {
-  LINE,
-  PLUS,
-  MINUS,
-  MULTIPLY,
-  DIVIDE,
-  SINGLE // TODO remove?? SINGLE should be a degenerate case of PLUS
-} type_t;
-
-typedef struct possible {
-  char flags[MAX_PROBLEM_SIZE + 1];
-  int num;
-} possible_t;
-
-typedef struct cellnode {
-  int previous;
-  int next;
-} cellnode_t;
-
-typedef struct celllist {
-  int start;
-  cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
-} celllist_t;
-
-typedef struct constraint {
-  type_t type;
-  long value;
-  possible_t possibles;
-  int numCells;
-  celllist_t cellList;
-} constraint_t;
-
-typedef struct cell {
-  int value;
-  possible_t possibles;
-  constraint_t* constraints[NUM_CELL_CONSTRAINTS];
-} cell_t;
 
 typedef struct job {
   int cellIndex;
@@ -104,18 +33,10 @@ void removeCellFromConstraints(cell_t* cell, int cellIndex);
 void applyValue(cell_t* cell, int* oldValue, int newValue);
 void restoreCellToConstraints(cell_t* cell, int cellIndex, int oldValue);
 
-// Problem size
-int N;
-// Total number of cells in the problem
-int totalNumCells;
 // Problem grid
 cell_t* cells;
-// Number of constraints
-int numConstraints;
 // Constraints array
 constraint_t* constraints;
-// Max number by multiplying
-long* maxMultiply;
 // Max number of jobs
 int maxJobs;
 // Number of cells set per job
