@@ -109,6 +109,8 @@ int solve(int step);
 void updateConstraint(constraint_t* constraint, int oldCellValue,
                       int oldNumCells, int newCellValue, int newNumCells);
 void notifyCellsOfChange(celllist_t* cellList, int value, char markPossible);
+void notifyCellsOfChanges(celllist_t* cellList, int start, int end,
+                              char markPossible);
 
 // Cell list functions
 inline void initList(celllist_t* cellList);
@@ -354,23 +356,40 @@ int solve(int step) {
 // TODO make instead notifyCellOfNewPossibles?
 // TODO allow updating range of numbers
 void notifyCellsOfChange(celllist_t* cellList, int value, char markPossible) {
-  int i;
+  int i, flag;
 
-  if (markPossible) {
-    for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
-      cells[i].possibles.flags[value]++;
+  for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
+    flag = cells[i].possibles.flags[value];
+    if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
+      cells[i].possibles.num++;
+    else if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
+      cells[i].possibles.num--;
 
-      if (cells[i].possibles.flags[value] == NUM_CELL_CONSTRAINTS)
-        cells[i].possibles.num++;
-    }
+    cells[i].possibles.flags[value] = flag + (markPossible ? 1 : -1);
   }
-  else{
-    for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
-      if (cells[i].possibles.flags[value] == NUM_CELL_CONSTRAINTS)
-        cells[i].possibles.num--;
+}
 
-      cells[i].possibles.flags[value]--;
+void notifyCellsOfChanges(celllist_t* cellList, int start, int end,
+                              char markPossible) {
+  int i, j, flag, num;
+
+  if (end < start)
+    return;
+
+  for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
+    num = cells[i].possibles.num;
+
+    for (j = start; j <= end; j++) {
+      flag = cells[i].possibles.flags[j];
+      if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
+        num++;
+      if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
+        num--;
+
+      cells[i].possibles.flags[j] = flag + (markPossible ? 1 : -1);
     }
+
+    cells[i].possibles.num = num;
   }
 }
 
@@ -459,9 +478,7 @@ void initColumnConstraint(constraint_t* constraint, int col) {
 }
 
 void initLineCells(celllist_t* cellList) {
-  int i;
-  for (i = 1; i <= N; i++)
-    notifyCellsOfChange(cellList, i, 1);
+  notifyCellsOfChanges(cellList, 1, N, 1);
 }
 
 void updateLineCells(celllist_t* cellList, int oldCellValue, int newCellValue) {
@@ -473,18 +490,14 @@ void updateLineCells(celllist_t* cellList, int oldCellValue, int newCellValue) {
 }
 
 void initPlusCells(celllist_t* cellList, long value, int numCells) {
-  int i;
+  // Possibles = [start, end], everything else impossible
   int start = MAX(1, value - N * (numCells - 1));
   int end = MIN(N, value - (numCells - 1));
-
-  // Possibles = [start, end], everything else impossible
-  for (i = start; i <= end; i++)
-    notifyCellsOfChange(cellList, i, 1);
+  notifyCellsOfChanges(cellList, start, end, 1);
 }
 
 void updatePlusCells(celllist_t* cellList, long oldValue,
                          int oldNumCells, long newValue, int newNumCells) {
-  int i;
   // Possibles = [start, end], everything else impossible
   int oldStart = MAX(1, oldValue - N * (oldNumCells - 1));
   int oldEnd = MIN(N, oldValue - (oldNumCells - 1));
@@ -493,16 +506,12 @@ void updatePlusCells(celllist_t* cellList, long oldValue,
   int newEnd = MIN(N, newValue - (newNumCells - 1));
 
   // Notify of new impossibles from start/end changes
-  for (i = oldStart; i < newStart ; i++)
-   notifyCellsOfChange(cellList, i, 0);
-  for (i = newEnd + 1; i <= oldEnd; i++)
-   notifyCellsOfChange(cellList, i, 0);
+  notifyCellsOfChanges(cellList, oldStart, newStart - 1, 0);
+  notifyCellsOfChanges(cellList, newEnd + 1, oldEnd, 0);
 
   // Notify of new possibles from start/end changes
-  for (i = newStart; i < oldStart; i++)
-   notifyCellsOfChange(cellList, i, 1);
-  for (i = oldEnd + 1; i <= newEnd; i++)
-   notifyCellsOfChange(cellList, i, 1);
+  notifyCellsOfChanges(cellList, newStart, oldStart - 1, 1);
+  notifyCellsOfChanges(cellList, oldEnd + 1, newEnd, 1);
 }
 
 void initMinusCells(celllist_t* cellList, long value) {
@@ -510,13 +519,9 @@ void initMinusCells(celllist_t* cellList, long value) {
 }
 
 void initMinusCellsHelper(celllist_t* cellList, long value, char markPossible) {
-  int i;
-
   // Impossibles = [N - value + 1, value], everything else possible
-  for (i = 1; i <= N - value; i++)
-    notifyCellsOfChange(cellList, i, markPossible);
-  for (i = MAX(N - value + 1, value + 1); i <= N; i++)
-    notifyCellsOfChange(cellList, i, markPossible);
+  notifyCellsOfChanges(cellList, 1, N - value, markPossible);
+  notifyCellsOfChanges(cellList, MAX(N - value, value) + 1, N, markPossible);
 }
 
 void initPartialMinusCells(celllist_t* cellList, long value,
