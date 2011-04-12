@@ -48,13 +48,13 @@ typedef struct cellnode {
 
 typedef struct celllist {
   int start;
+  int size;
   cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
 } celllist_t;
 
 typedef struct constraint {
   type_t type;
   long value;
-  int numCells; // TODO Move into cellList?
   celllist_t cellList;
 } constraint_t;
 
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
   FILE* in;
   char type, lineBuf[MAX_LINE_LEN];
   char* ptr;
-  int i, x, y, numCells;
+  int i, x, y;
   long value;
   constraint_t* constraint;
   celllist_t* cellList;
@@ -204,11 +204,8 @@ int main(int argc, char **argv)
     value = atol(ptr);
 
     // Read in cell coordinates
-    numCells = 0;
     initList(cellList);
     while ((ptr = strtok(NULL, ", "))) {
-      numCells++;
-
       x = atoi(ptr);
       ptr = strtok(NULL, ", ");
       y = atoi(ptr);
@@ -218,14 +215,13 @@ int main(int argc, char **argv)
       cells[GET_CELL(x, y)].constraints[BLOCK_CONSTRAINT_INDEX] = constraint;
     }
 
-    constraint->numCells = numCells;
     constraint->value = value;
 
     // Initialize constraint's type and possibles
     switch (type) {
       case '+':
         constraint->type = PLUS;
-        initPlusCells(cellList, value, numCells);
+        initPlusCells(cellList, value, constraint->cellList.size);
         break;
       case '-':
         constraint->type = MINUS;
@@ -233,7 +229,7 @@ int main(int argc, char **argv)
         break;
       case 'x':
         constraint->type = MULTIPLY;
-        initMultiplyCells(cellList, value, numCells);
+        initMultiplyCells(cellList, value, constraint->cellList.size);
         break;
       case '/':
         constraint->type = DIVIDE;
@@ -305,11 +301,9 @@ int solve(int step) {
   for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
     constraint = cell->constraints[i];
 
-    oldNumCells = constraint->numCells;
-    newNumCells = oldNumCells - 1;
-    constraint->numCells = newNumCells;
-
+    oldNumCells = constraint->cellList.size;
     removeNode(&(constraint->cellList), minIndex);
+    newNumCells = constraint->cellList.size;
   }
 
   // Try all possible values for next cell
@@ -332,9 +326,8 @@ int solve(int step) {
   // Add cell back to its constraints
   for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
     constraint = cell->constraints[i];
-    newNumCells = ++(constraint->numCells);
     updateConstraint(constraint, oldValue, oldNumCells,
-                     UNASSIGNED_VALUE, newNumCells);
+                     UNASSIGNED_VALUE, oldNumCells + 1);
 
     // Add cell back to cell list after updating constraint so cell's
     // possibles are not changed during the update
@@ -441,7 +434,6 @@ void initRowConstraint(constraint_t* constraint, int row) {
 
   constraint->type = LINE;
   constraint->value = -1;
-  constraint->numCells = N;
 
   // Add constraint to its cells
   initList(&(constraint->cellList));
@@ -459,7 +451,6 @@ void initColumnConstraint(constraint_t* constraint, int col) {
 
   constraint->type = LINE;
   constraint->value = -1;
-  constraint->numCells = N;
 
   // Add constraint to its cells
   initList(&(constraint->cellList));
@@ -642,6 +633,8 @@ inline void addNode(celllist_t* cellList, int node) {
 
   if (start != END_NODE)
     cellList->cells[start].previous = node;
+
+  ++(cellList->size);
 }
 
 // Remove a node from a cell list
@@ -656,6 +649,8 @@ inline void removeNode(celllist_t* cellList, int node) {
     cellList->start = next;
   else
     cellList->cells[previous].next = next;
+
+  --(cellList->size);
 }
 
 // Print usage information and exit
