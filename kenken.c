@@ -401,7 +401,7 @@ inline void updateConstraint(constraint_t* constraint, int oldCellValue,
       break;
 
     case SINGLE:
-      notifyCellsOfChange(cellList, value, (newNumCells == 1));
+      notifyCellsOfChange(cellList, value, (char)(newNumCells == 1));
       break;
   }
 }
@@ -538,8 +538,8 @@ inline void updateMultiplyCells(celllist_t* cellList, long oldValue,
     newStart = MAX(1, newValue / maxMultiply[newNumCells - 1]);
 
   for (i = MIN(oldStart, newStart); i <= MAX(oldEnd, newEnd); i++) {
-    oldIsPossible = (i >= oldStart && i <= oldEnd && oldValue % i == 0);
-    newIsPossible = (i >= newStart && i <= newEnd && newValue % i == 0);
+    oldIsPossible = (char)(i >= oldStart && i <= oldEnd && oldValue % i == 0);
+    newIsPossible = (char)(i >= newStart && i <= newEnd && newValue % i == 0);
     if (oldIsPossible != newIsPossible)
       notifyCellsOfChange(cellList, i, newIsPossible);
   }
@@ -574,7 +574,8 @@ inline void initPartialDivideCells(celllist_t* cellList, long value,
 // Notify cells that a possible value has changed state
 inline void notifyCellsOfChange(celllist_t* cellList, int value,
                                 char markPossible) {
-  int i, flag;
+  int i;
+  char flag;
 
   for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
     flag = cells[i].possibles[value];
@@ -583,7 +584,7 @@ inline void notifyCellsOfChange(celllist_t* cellList, int value,
     else if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
       cells[i].numPossibles--;
 
-    cells[i].possibles[value] = flag + (markPossible ? 1 : -1);
+    cells[i].possibles[value] = flag + (char)(markPossible ? 1 : -1);
   }
 }
 
@@ -605,7 +606,7 @@ inline void notifyCellsOfChanges(celllist_t* cellList, int start, int end,
       if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
         num--;
 
-      cells[i].possibles[j] = flag + (markPossible ? 1 : -1);
+      cells[i].possibles[j] = flag + (char)(markPossible ? 1 : -1);
     }
 
     cells[i].numPossibles = num;
