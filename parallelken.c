@@ -324,10 +324,6 @@ int fillJobs(int step) {
     return 0;
   }
 
-  // Success if all cells filled in
-  if (step == totalNumCells)
-    return 1;
-
   int nextCellIndex = findNextCell(cells);
 
   if (nextCellIndex < 0)
@@ -415,6 +411,8 @@ void removeCellFromConstraints(cell_t* cell, int cellIndex) {
 }
 
 // Apply a value to a cell and update constraints
+// We can use myCells as a reference because only an individual processor
+// will ever call this function
 void applyValue(cell_t* cell, int* oldValue, int newValue) {
   int j;
   cell->value = newValue;
@@ -425,6 +423,8 @@ void applyValue(cell_t* cell, int* oldValue, int newValue) {
 }
 
 // Restore a cell to its constraints
+// We may use myCells as a reference because only an individual processor
+// will ever call this function
 void restoreCellToConstraints(cell_t* cell, int cellIndex, int oldValue) {
   int i;
   constraint_t* constraint;
