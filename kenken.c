@@ -40,7 +40,7 @@ typedef enum {
   MINUS,
   MULTIPLY,
   DIVIDE,
-  SINGLE // TODO remove?? SINGLE should be a degenerate case of PLUS
+  SINGLE
 } type_t;
 
 typedef struct possible { // TODO merge into cell, and rename to intersection?
@@ -75,29 +75,35 @@ typedef struct cell {
 void initRowConstraint(constraint_t* constraint, int row);
 void initColumnConstraint(constraint_t* constraint, int col);
 
-// Functions to initialize possibles
-void initLinePossibles(celllist_t* cellList, char markPossible);
-void initPlusPossibles(celllist_t* cellList, long value, int numCells, char markPossible);
-void initMinusPossibles(celllist_t* cellList, long value, char markPossible);
-void initPartialMinusPossibles(celllist_t* cellList, long value,
+// Functions to initialize cell's possibles in given constraint
+void initLineCells(celllist_t* cellList);
+void initPlusCells(celllist_t* cellList, long value, int numCells);
+void initMinusCells(celllist_t* cellList, long value);
+void initMultiplyCells(celllist_t* cellList, long value, int numCells);
+void initDivideCells(celllist_t* cellList, long value);
+void initSingleCells(celllist_t* cellList, long value);
+
+// Functions for updating cell's possibles when constraint changed
+void updateLineCells(celllist_t* cellList, int oldCellValue, int newCellValue);
+void updatePlusCells(celllist_t* cellList, long oldValue, int oldNumCells,
+                     long newValue, int newNumCells);
+void updateMinusCells(constraint_t* constraint, int value, int oldCellValue,
+                      int oldNumCells, int newCellValue, int newNumCells);
+void updateMultiplyCells(celllist_t* cellList, long oldValue, int oldNumCells,
+                         long newValue, int newNumCells);
+void updateDivideCells(constraint_t* constraint, int value, int oldCellValue,
+                       int oldNumCells, int newCellValue, int newNumCells);
+void updateSingleCells(celllist_t* cellList, int value, int numCells);
+
+// Helper functions used when updating cell's possibles
+void initMinusCellsHelper(celllist_t* cellList, long value, char markPossible);
+void initPartialMinusCells(celllist_t* cellList, long value,
                                int cellValue, char markPossible);
-void initMultiplyPossibles(celllist_t* cellList, long value, int numCells, char markPossible);
-void initDividePossibles(celllist_t* cellList, long value, char markPossible);
-void initPartialDividePossibles(celllist_t* cellList, long value,
+void initDivideCellsHelper(celllist_t* cellList, long value, char markPossible);
+void initPartialDivideCells(celllist_t* cellList, long value,
                                 int cellValue, char markPossible);
-void initSinglePossibles(celllist_t* cellList, long value, int numCells, char markPossible);
 
 // TODO remove "new"?
-// TODO rename functions
-void updateLinePossibles(celllist_t* cellList, int old, int new);
-void updatePlusPossibles(celllist_t* cellList, long oldValue,
-                         int oldNumCells, long newValue, int newNumCells);
-void updateMinusPossibles(constraint_t* constraint, int value, int oldCellValue, int oldNumCells, int newCellValue, int newNumCells);
-void updateMultiplyPossibles(celllist_t* cellList, long oldValue,
-                         int oldNumCells, long newValue, int newNumCells);
-void updateDividePossibles(constraint_t* constraint, int value, int oldCellValue, int oldNumCells, int newCellValue, int newNumCells);
-void updateSinglePossibles(celllist_t* cellList, int value, int numCells);
-
 // Algorithm functions
 int solve(int step);
 void updateConstraint(constraint_t* constraint, int oldCellValue,
@@ -225,23 +231,23 @@ int main(int argc, char **argv)
     switch (type) {
       case '+':
         constraint->type = PLUS;
-        initPlusPossibles(cellList, value, numCells, 1);
+        initPlusCells(cellList, value, numCells);
         break;
       case '-':
         constraint->type = MINUS;
-        initMinusPossibles(cellList, value, 1);
+        initMinusCells(cellList, value);
         break;
       case 'x':
         constraint->type = MULTIPLY;
-        initMultiplyPossibles(cellList, value, numCells, 1);
+        initMultiplyCells(cellList, value, numCells);
         break;
       case '/':
         constraint->type = DIVIDE;
-        initDividePossibles(cellList, value, 1);
+        initDivideCells(cellList, value);
         break;
       case '!':
         constraint->type = SINGLE;
-        initSinglePossibles(cellList, value, numCells, 1);
+        initSingleCells(cellList, value);
         break;
       default:
         appError("Malformed constraint in input file");
@@ -385,7 +391,7 @@ void updateConstraint(constraint_t* constraint, int oldCellValue,
 
   switch (constraint->type) {
     case LINE:
-      updateLinePossibles(cellList, oldCellValue, newCellValue);
+      updateLineCells(cellList, oldCellValue, newCellValue);
       break;
 
     case PLUS:
@@ -395,11 +401,11 @@ void updateConstraint(constraint_t* constraint, int oldCellValue,
         value -= newCellValue;
 
       constraint->value = value;
-      updatePlusPossibles(cellList, oldValue, oldNumCells, value, newNumCells);
+      updatePlusCells(cellList, oldValue, oldNumCells, value, newNumCells);
       break;
 
     case MINUS:
-      updateMinusPossibles(constraint, value, oldCellValue, oldNumCells,
+      updateMinusCells(constraint, value, oldCellValue, oldNumCells,
                            newCellValue, newNumCells);
       break;
 
@@ -410,17 +416,17 @@ void updateConstraint(constraint_t* constraint, int oldCellValue,
         value /= newCellValue;
 
       constraint->value = value;
-      updateMultiplyPossibles(cellList, oldValue, oldNumCells,
+      updateMultiplyCells(cellList, oldValue, oldNumCells,
                               value, newNumCells);
       break;
 
     case DIVIDE:
-      updateDividePossibles(constraint, value, oldCellValue, oldNumCells,
+      updateDivideCells(constraint, value, oldCellValue, oldNumCells,
                             newCellValue, newNumCells);
       break;
 
     case SINGLE:
-      updateSinglePossibles(cellList, value, newNumCells);
+      updateSingleCells(cellList, value, newNumCells);
       break;
   }
 }
@@ -440,7 +446,7 @@ void initRowConstraint(constraint_t* constraint, int row) {
     cells[GET_CELL(row, i)].constraints[ROW_CONSTRAINT_INDEX] = constraint;
   }
 
-  initLinePossibles(&constraint->cellList, 1);
+  initLineCells(&constraint->cellList);
 }
 
 // Initializes a column constraint for the given column
@@ -458,36 +464,34 @@ void initColumnConstraint(constraint_t* constraint, int col) {
     cells[GET_CELL(i, col)].constraints[COLUMN_CONSTRAINT_INDEX] = constraint;
   }
 
-  initLinePossibles(&constraint->cellList, 1);
+  initLineCells(&constraint->cellList);
 }
 
-// Initialize possibles for a line constraint
-void initLinePossibles(celllist_t* cellList, char markPossible) {
+void initLineCells(celllist_t* cellList) {
   int i;
   for (i = 1; i <= N; i++)
-    notifyCellsOfChange(cellList, i, markPossible);
+    notifyCellsOfPossible(cellList, i);
 }
 
-void updateLinePossibles(celllist_t* cellList, int old, int new) {
-  if (old != UNASSIGNED_VALUE)
-    notifyCellsOfPossible(cellList, old);
+void updateLineCells(celllist_t* cellList, int oldCellValue, int newCellValue) {
+  if (oldCellValue != UNASSIGNED_VALUE)
+    notifyCellsOfPossible(cellList, oldCellValue);
 
-  if (new != UNASSIGNED_VALUE)
-    notifyCellsOfImpossible(cellList, new);
+  if (newCellValue != UNASSIGNED_VALUE)
+    notifyCellsOfImpossible(cellList, newCellValue);
 }
 
-// Initialize possibles for plus a constraint
-void initPlusPossibles(celllist_t* cellList, long value, int numCells, char markPossible) {
+void initPlusCells(celllist_t* cellList, long value, int numCells) {
   int i;
   int start = MAX(1, value - N * (numCells - 1));
   int end = MIN(N, value - (numCells - 1));
 
   // Possibles = [start, end], everything else impossible
   for (i = start; i <= end; i++)
-    notifyCellsOfChange(cellList, i, markPossible);
+    notifyCellsOfPossible(cellList, i);
 }
 
-void updatePlusPossibles(celllist_t* cellList, long oldValue,
+void updatePlusCells(celllist_t* cellList, long oldValue,
                          int oldNumCells, long newValue, int newNumCells) {
   int i;
   // Possibles = [start, end], everything else impossible
@@ -510,8 +514,11 @@ void updatePlusPossibles(celllist_t* cellList, long oldValue,
    notifyCellsOfPossible(cellList, i);
 }
 
-// Initialize possibles for a minus constraint
-void initMinusPossibles(celllist_t* cellList, long value, char markPossible) {
+void initMinusCells(celllist_t* cellList, long value) {
+  initMinusCellsHelper(cellList, value, 1);
+}
+
+void initMinusCellsHelper(celllist_t* cellList, long value, char markPossible) {
   int i;
 
   // Impossibles = [N - value + 1, value], everything else possible
@@ -521,8 +528,7 @@ void initMinusPossibles(celllist_t* cellList, long value, char markPossible) {
     notifyCellsOfChange(cellList, i, markPossible);
 }
 
-// Initialize possibles for a partial minus constraint
-void initPartialMinusPossibles(celllist_t* cellList, long value,
+void initPartialMinusCells(celllist_t* cellList, long value,
                                int cellValue, char markPossible) {
   if (cellValue + value <= N)
     notifyCellsOfChange(cellList, cellValue + value, markPossible);
@@ -532,22 +538,21 @@ void initPartialMinusPossibles(celllist_t* cellList, long value,
 }
 
 // Don't update possibles when num cells is 0 so undoing is easier
-void updateMinusPossibles(constraint_t* constraint, int value, int oldCellValue, int oldNumCells, int newCellValue, int newNumCells) {
+void updateMinusCells(constraint_t* constraint, int value, int oldCellValue, int oldNumCells, int newCellValue, int newNumCells) {
   celllist_t* cellList = &(constraint->cellList);
 
   if (oldNumCells == 2)
-    initMinusPossibles(cellList, value, 0);
+    initMinusCellsHelper(cellList, value, 0);
   else if (oldCellValue != UNASSIGNED_VALUE && oldNumCells == 1)
-    initPartialMinusPossibles(cellList, value, oldCellValue, 0);
+    initPartialMinusCells(cellList, value, oldCellValue, 0);
 
   if (newNumCells == 2)
-    initMinusPossibles(cellList, value, 1);
+    initMinusCellsHelper(cellList, value, 1);
   else if (newCellValue != UNASSIGNED_VALUE && newNumCells == 1)
-    initPartialMinusPossibles(cellList, value, newCellValue, 1);
+    initPartialMinusCells(cellList, value, newCellValue, 1);
 }
 
-// Initialize possibles for a multiply constraint
-void initMultiplyPossibles(celllist_t* cellList, long value, int numCells, char markPossible) {
+void initMultiplyCells(celllist_t* cellList, long value, int numCells) {
   int i;
 
   if (numCells == 0)
@@ -556,23 +561,37 @@ void initMultiplyPossibles(celllist_t* cellList, long value, int numCells, char 
   long maxLeft = maxMultiply[numCells - 1];
   for (i = MAX(1, value / maxLeft); i <= MIN(value, N); i++) {
     if (value % i == 0)
-      notifyCellsOfChange(cellList, i, markPossible);
+      notifyCellsOfPossible(cellList, i);
   }
 }
 
-void updateMultiplyPossibles(celllist_t* cellList, long oldValue,
+void updateMultiplyCells(celllist_t* cellList, long oldValue,
                          int oldNumCells, long newValue, int newNumCells) {
-/*  int i;
-  long oldStart = N + 1, newStart;
-  if (numCells > 0)
-    oldStart = MAX(1, value / maxLeft);*/
+  int i;
+  int oldStart = N + 1;
+  int newStart = N + 1;
+  int oldEnd = MIN(oldValue, N);
+  int newEnd = MIN(newValue, N);
+  char oldIsPossible, newIsPossible;
 
-  initMultiplyPossibles(cellList, oldValue, oldNumCells, 0);
-  initMultiplyPossibles(cellList, newValue, newNumCells, 1);
+  if (oldNumCells > 0)
+    oldStart = MAX(1, oldValue / maxMultiply[oldNumCells - 1]);
+  if (newNumCells > 0)
+    newStart = MAX(1, newValue / maxMultiply[newNumCells - 1]);
+
+  for (i = MIN(oldStart, newStart); i <= MAX(oldEnd, newEnd); i++) {
+    oldIsPossible = (i >= oldStart && i <= oldEnd && oldValue % i == 0);
+    newIsPossible = (i >= newStart && i <= newEnd && newValue % i == 0);
+    if (oldIsPossible != newIsPossible)
+      notifyCellsOfChange(cellList, i, newIsPossible);
+  }
 }
 
-// Initialize possibles for a divide constraint
-void initDividePossibles(celllist_t* cellList, long value, char markPossible) {
+void initDivideCells(celllist_t* cellList, long value) {
+  initDivideCellsHelper(cellList, value, 1);
+}
+
+void initDivideCellsHelper(celllist_t* cellList, long value, char markPossible) {
   int i;
 
   // Note that value can not equal 1 since 1,1 is the only answer to 1/
@@ -586,8 +605,7 @@ void initDividePossibles(celllist_t* cellList, long value, char markPossible) {
   }
 }
 
-// Initialize possibles for a partial divide constraint
-void initPartialDividePossibles(celllist_t* cellList, long value,
+void initPartialDivideCells(celllist_t* cellList, long value,
                                 int cellValue, char markPossible) {
   if (cellValue * value <= N)
     notifyCellsOfChange(cellList, cellValue * value, markPossible);
@@ -597,26 +615,25 @@ void initPartialDividePossibles(celllist_t* cellList, long value,
 }
 
 // Don't update possibles when num cells is 0 so undoing is easier
-void updateDividePossibles(constraint_t* constraint, int value, int oldCellValue, int oldNumCells, int newCellValue, int newNumCells) {
+void updateDivideCells(constraint_t* constraint, int value, int oldCellValue, int oldNumCells, int newCellValue, int newNumCells) {
   celllist_t* cellList = &(constraint->cellList);
 
   if (oldNumCells == 2)
-    initDividePossibles(cellList, value, 0);
+    initDivideCellsHelper(cellList, value, 0);
   else if (oldCellValue != UNASSIGNED_VALUE && oldNumCells == 1)
-    initPartialDividePossibles(cellList, value, oldCellValue, 0);
+    initPartialDivideCells(cellList, value, oldCellValue, 0);
 
   if (newNumCells == 2)
-    initDividePossibles(cellList, value, 1);
+    initDivideCellsHelper(cellList, value, 1);
   else if (newCellValue != UNASSIGNED_VALUE && newNumCells == 1)
-    initPartialDividePossibles(cellList, value, newCellValue, 1);
+    initPartialDivideCells(cellList, value, newCellValue, 1);
 }
 
-// Initialize possibles for a single constraint
-void initSinglePossibles(celllist_t* cellList, long value, int numCells, char markPossible) {
-  initPlusPossibles(cellList, value, numCells, markPossible);
+void initSingleCells(celllist_t* cellList, long value) {
+  updateSingleCells(cellList, value, 1);
 }
 
-void updateSinglePossibles(celllist_t* cellList, int value, int numCells) {
+void updateSingleCells(celllist_t* cellList, int value, int numCells) {
   if (numCells == 1)
     notifyCellsOfPossible(cellList, value);
   else
