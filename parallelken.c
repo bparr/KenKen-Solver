@@ -50,6 +50,8 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
+// Index into jobs array
+#define GET_JOB(i) ((i)*(jobLength))
 
 typedef enum {
   LINE,
@@ -236,11 +238,9 @@ int runParallel() {
       while (queueHead == queueTail);
 
       // Copy over job
-      memcpy(myJob, &jobs[queueHead], sizeof(job_t) * jobLength);
+      memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
       queueHead = INCREMENT(queueHead);
     }
-
-    printf("%d Working on a Job", omp_get_thread_num());
 
     // Apply job: Note that cellIndices align properly with system state
     // of cell/constraint modifications because the method for achieving their
@@ -318,7 +318,7 @@ int fillJobs(int step) {
       return 1;
 
     // Spot in the buffer freed up so set value as current job
-    memcpy(&jobs[queueTail], myJob, sizeof(job_t) * jobLength);
+    memcpy(&jobs[GET_JOB(queueTail)], myJob, sizeof(job_t) * jobLength);
     queueTail = INCREMENT(queueTail);
     printf("job inserted into the queue");
     return 0;
