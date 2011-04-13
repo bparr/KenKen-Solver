@@ -69,8 +69,8 @@ int main(int argc, char **argv)
   if (!jobs)
     unixError("Failed to allocated memory for the job queue");
 
-	queueHead = 0;
-	queueTail = 0;
+  queueHead = 0;
+  queueTail = 0;
   found = 0;
 
   // Run algorithm
@@ -96,7 +96,7 @@ void runParallel() {
 
   // Run algorithm
 #pragma omp parallel shared(queueHead, queueTail, found, cells, constraints, \
-														maxMultiply, N, totalNumCells, numConstraints) \
+                            maxMultiply, N, totalNumCells, numConstraints) \
                     private(myConstraints, myCells, myJob, step)
 {
   // Initialize our local copies of the data-structures
@@ -113,8 +113,9 @@ void runParallel() {
     unixError("Failed to allocate memory for myJob");
 
   // Copy the data-structures into our own local copies
-	memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
+  memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
   memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
+  bzero(myJob, sizeof(job_t) * jobLength); // Zero out job
 
   // Begin finding jobs and running algorithm
   #pragma omp master
@@ -125,22 +126,20 @@ void runParallel() {
 
   // All other threads loop
   while (!found) {
-    bzero(myJob, sizeof(job_t) * jobLength); // Zero out job
+    while (getNextJob(myJob)) {
 
-		while (getNextJob(myJob)) {
+      // Apply job
+      for (step = 0; step < jobLength; step++)
+        applyValue(myCells, myConstraints, myJob[step].cellIndex, myJob[step].value);
 
-    	// Apply job
-    	for (step = 0; step < jobLength; step++)
-				applyValue(myCells, myConstraints, myJob[step].cellIndex, myJob[step].value);
+      // Begin computation
+      if (solve(step, myCells, myConstraints))
+        break;
 
-    	// Begin computation
-    	if (solve(step, myCells, myConstraints))
-      	break;
-
-			// Reset the job
-			memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
-  		memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
-		}
+      // Reset the job
+      memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
+      memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
+    }
   }
   // Deallocate resources
   free(myJob);
@@ -153,35 +152,35 @@ void runParallel() {
 // Retrieves the next job from the job array. Will block until a job is
 // available
 int getNextJob(job_t* myJob) {
-	int gotJob = 0;
-	while (!gotJob) {
-		// Block until job becomes available
-		while (!found && (queueHead == queueTail));
+  int gotJob = 0;
+  while (!gotJob) {
+    // Block until job becomes available
+    while (!found && (queueHead == queueTail));
 
-		if (found)
-			return 0;
+    if (found)
+      return 0;
 
-		// Only one processor should proceed to the critical section at a time
-		#pragma omp critical
-		{
-			if (queueHead != queueTail && !found) {
-      	// Copy over job
-      	memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
-      	queueHead = INCREMENT(queueHead);
-				
-				// Successfully retrieved job
-				gotJob = 1;
-			}
-		}
-	}
+    // Only one processor should proceed to the critical section at a time
+    #pragma omp critical
+    {
+      if (queueHead != queueTail && !found) {
+        // Copy over job
+        memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
+        queueHead = INCREMENT(queueHead);
+        
+        // Successfully retrieved job
+        gotJob = 1;
+      }
+    }
+  }
 
-	return 1;
+  return 1;
 }
 
 // Fills the job array. Returns 1 to end the filling, 0 to continue
 int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints) {
-	int cellIndex;
-	int value = UNASSIGNED_VALUE;
+  int cellIndex;
+  int value = UNASSIGNED_VALUE;
  
   if (found || step == jobLength) {
     // Loop while buffer is full and no solution is found
@@ -197,43 +196,43 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     return 0;
   }
 
-	// Find the next cell to fill and test all possible values
-	cellIndex = getNextCellToFill(myCells, myConstraints);
-	while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
-		myJob[step].cellIndex = cellIndex;
-		myJob[step].value = value;
+  // Find the next cell to fill and test all possible values
+  cellIndex = getNextCellToFill(myCells, myConstraints);
+  while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
+    myJob[step].cellIndex = cellIndex;
+    myJob[step].value = value;
 
-		if (fillJobs(step + 1, myJob, myCells, myConstraints))
-			return 1;
-	}
+    if (fillJobs(step + 1, myJob, myCells, myConstraints))
+      return 1;
+  }
 
-	return 0;
+  return 0;
 }
 
 // Main recursive function used to solve the program
 int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
-	int cellIndex, i;
-	int value = UNASSIGNED_VALUE;
+  int cellIndex, i;
+  int value = UNASSIGNED_VALUE;
 
-	if (step == totalNumCells || found) {
-		// Critical section that updates cells, and sets found to 1
+  if (step == totalNumCells || found) {
+    // Critical section that updates cells, and sets found to 1
     #pragma omp single nowait
     {
-  		// Print solution if one found
-  		for (i = 0; i < totalNumCells; i++)
-    		printf("%d%c", myCells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
+      // Print solution if one found
+      for (i = 0; i < totalNumCells; i++)
+        printf("%d%c", myCells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
     }
 
-		found = 1;
-		return 1;
-	}
+    found = 1;
+    return 1;
+  }
 
-	// Find the next cell to fill and test all possible values
-	cellIndex = getNextCellToFill(myCells, myConstraints);
-	while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
-		if (solve(step + 1, myCells, myConstraints))
-			return 1;
-	}
+  // Find the next cell to fill and test all possible values
+  cellIndex = getNextCellToFill(myCells, myConstraints);
+  while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
+    if (solve(step + 1, myCells, myConstraints))
+      return 1;
+  }
 
-	return 0;
+  return 0;
 }
