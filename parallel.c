@@ -196,7 +196,9 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
   }
 
   // Find the next cell to fill and test all possible values
-  cellIndex = getNextCellToFill(myCells, myConstraints);
+  if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
+    return 0;
+
   while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
     myJob[step].cellIndex = cellIndex;
     myJob[step].value = value;
@@ -230,7 +232,9 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   }
 
   // Find the next cell to fill and test all possible values
-  cellIndex = getNextCellToFill(myCells, myConstraints);
+  if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
+    return 0;
+
   while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
     if (solve(step + 1, myCells, myConstraints))
       return 1;
