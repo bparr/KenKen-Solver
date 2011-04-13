@@ -12,11 +12,48 @@
 #include <limits.h>
 #include <unistd.h>
 
+// Maximum problem size supported by program
+#define MAX_PROBLEM_SIZE 25
 // Value used to indicate a cell's value is unassigned
 #define UNASSIGNED_VALUE 0
+// Number of constraints a cell has (1 row constraint, 1 column constraint,
+// 1 block constraint)
+#define NUM_CELL_CONSTRAINTS 3
 
-typedef struct cell cell_t;
-typedef struct constraint constraint_t;
+
+typedef enum {
+  LINE,
+  PLUS,
+  MINUS,
+  MULTIPLY,
+  DIVIDE,
+  SINGLE
+} type_t;
+
+typedef struct cellnode {
+  int previous;
+  int next;
+} cellnode_t;
+
+typedef struct celllist {
+  int start;
+  int size;
+  cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
+} celllist_t;
+
+typedef struct constraint {
+  type_t type;
+  long value;
+  celllist_t cellList;
+} constraint_t;
+
+typedef struct cell {
+  int value;
+  int numPossibles;
+  char possibles[MAX_PROBLEM_SIZE + 1];
+  int constraintIndexes[NUM_CELL_CONSTRAINTS];
+} cell_t;
+
 
 // Problem size
 int N;

@@ -5,8 +5,6 @@
 
 #include "kenken.h"
 
-// Maximum problem size supported by program
-#define MAX_PROBLEM_SIZE 25
 // Maximum line length of input file
 #define MAX_LINE_LEN 2048
 
@@ -15,8 +13,7 @@
 // Value of node at start and end of cell list
 #define END_NODE -1
 
-// Different types of constraints in cell_t constraint array
-#define NUM_CELL_CONSTRAINTS 3
+// Indexes of different types of constraints in cell_t constraint array
 #define ROW_CONSTRAINT_INDEX 0
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
@@ -25,40 +22,6 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 // Calculate the maximum of two numbers
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
-
-typedef enum {
-  LINE,
-  PLUS,
-  MINUS,
-  MULTIPLY,
-  DIVIDE,
-  SINGLE
-} type_t;
-
-typedef struct cellnode {
-  int previous;
-  int next;
-} cellnode_t;
-
-typedef struct celllist {
-  int start;
-  int size;
-  cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
-} celllist_t;
-
-struct constraint {
-  type_t type;
-  long value;
-  celllist_t cellList;
-};
-
-struct cell {
-  int value;
-  int numPossibles;
-  char possibles[MAX_PROBLEM_SIZE + 1];
-  int constraintIndexes[NUM_CELL_CONSTRAINTS];
-};
 
 
 // Max number by multiplying
