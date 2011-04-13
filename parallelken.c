@@ -64,7 +64,7 @@ int main(int argc, char **argv)
   // Always keeps one block in the array empty. This is necessary because of
   // the concurrent access. Readers modify end, writer modifies start.
   // Inherently thread-safe as long as reader's access is controlled.
-  jobLength = N; // Half the cells filled in
+  jobLength = (N*N)/2; // Half the cells filled in
   maxJobs = N*N;
 
   jobs = (job_t*)calloc(sizeof(job_t), jobLength * maxJobs);
@@ -158,10 +158,7 @@ int runParallel() {
 
 		#pragma omp critical
 		{
-		printf("%d head: %d tail: %d working on : ", omp_get_thread_num(), queueHead, queueTail);
-		for (step = 0; step < jobLength; step++)
-			printf("%d:%d  ", myJob[step].cellIndex, myJob[step].value);
-		printf("\n\n");
+			printf("%d working with head: %d tail: %d", omp_get_thread_num(), queueHead, queueTail);
 		}
 
     // Apply job: Note that cellIndices align properly with system state
