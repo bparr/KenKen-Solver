@@ -561,7 +561,7 @@ inline void notifyCellsOfChange(cell_t* cells, celllist_t* cellList, int value,
     if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
       cells[i].numPossibles--;
 
-    cells[i].possibles[value] = flag + (char)(markPossible ? 1 : -1);
+    cells[i].possibles[value] = (char)(flag + (markPossible ? 1 : -1));
   }
 }
 
@@ -583,7 +583,7 @@ inline void notifyCellsOfChanges(cell_t* cells, celllist_t* cellList,
       if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
         num--;
 
-      cells[i].possibles[j] = flag + (char)(markPossible ? 1 : -1);
+      cells[i].possibles[j] = (char)(flag + (markPossible ? 1 : -1));
     }
 
     cells[i].numPossibles = num;
