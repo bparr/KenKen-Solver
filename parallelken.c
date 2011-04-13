@@ -13,7 +13,7 @@
 #include <omp.h>
 
 // Number of processors
-#define P 16
+#define P 32
 
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
@@ -156,11 +156,6 @@ int runParallel() {
 			#pragma omp flush (queueHead)
     }
 
-		#pragma omp critical
-		{
-			printf("%d working with head: %d tail: %d", omp_get_thread_num(), queueHead, queueTail);
-		}
-
     // Apply job: Note that cellIndices align properly with system state
     // of cell/constraint modifications because the method for achieving their
     // values are similar to solving.
@@ -239,7 +234,6 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     // Spot in the buffer freed up so set value as current job
     memcpy(&jobs[GET_JOB(queueTail)], myJob, sizeof(job_t) * jobLength);
     queueTail = INCREMENT(queueTail);
-		printf("%d job added to queue with head: %d and tail: %d\n", omp_get_thread_num(), queueHead, queueTail);
 		#pragma omp flush (jobs,queueTail)
     return 0;
   }
