@@ -13,7 +13,7 @@
 #include <omp.h>
 
 // Number of processors
-#define P 32
+#define P 16
 
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
@@ -29,9 +29,9 @@ typedef struct job {
 int runParallel();
 int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints);
-inline void removeCellFromConstraints(constraint_t* myConstraints, cell_t* cell, int cellIndex);
-inline void applyValue(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int* oldValue, int newValue);
-inline void restoreCellToConstraints(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int cellIndex, int oldValue);
+void removeCellFromConstraints(constraint_t* myConstraints, cell_t* cell, int cellIndex);
+void applyValue(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int* oldValue, int newValue);
+void restoreCellToConstraints(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int cellIndex, int oldValue);
 
 // Problem grid
 cell_t* cells;
@@ -102,7 +102,8 @@ int runParallel() {
   omp_set_num_threads(P);
 
   // Run algorithm
-#pragma omp parallel shared(queueHead, queueTail, found, cells, constraints) \
+#pragma omp parallel shared(queueHead, queueTail, found, cells, constraints, \
+														maxMultiply, N, totalNumCells, numConstraints) \
                     private(myConstraints, myCells, myJob, jobStep, \
                             cellIndex, cell, oldValue, step)
 {
@@ -142,7 +143,9 @@ int runParallel() {
     {
       // Will hog critical section but this is ok because no processor
       // should continue if there are no jobs available. All should wait
-      while (!found && queueHead == queueTail);
+      while ((!found) && (queueHead == queueTail)) {
+				sleep(0);
+			}
 
       // Copy over job
       memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
@@ -165,6 +168,16 @@ int runParallel() {
       // Set value
       applyValue(myCells, myConstraints, cell, &oldValue, jobStep->value);
     }
+
+		/*#pragma omp critical
+		{
+		int i;
+		printf("Thread %d working on: myCells %p\n", omp_get_thread_num(), myCells);
+  	for (i = 0; i < totalNumCells; i++)
+    	printf("%d%c", myCells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
+
+		printf("\n\n");
+		}*/
 
     // Begin computation
     if (solve(step, myCells, myConstraints)) {
@@ -216,7 +229,7 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
 
   if (step == jobLength) {
     // Loop while buffer is full and no solution is found
-    while (!found && INCREMENT(queueTail) == queueHead)
+    while (!found && INCREMENT(queueTail) == queueHead);
 
     // If we exited while because solution was found, exit
     if (found) 
@@ -306,7 +319,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
 }
 
 // Remove a cell from its constraints
-inline void removeCellFromConstraints(constraint_t* myConstraints, cell_t* cell, int cellIndex) {
+void removeCellFromConstraints(constraint_t* myConstraints, cell_t* cell, int cellIndex) {
   int i;
   
   // Remove cell from its constraints
@@ -317,7 +330,7 @@ inline void removeCellFromConstraints(constraint_t* myConstraints, cell_t* cell,
 // Apply a value to a cell and update constraints
 // We can use myCells as a reference because only an individual processor
 // will ever call this function
-inline void applyValue(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int* oldValue, int newValue) {
+void applyValue(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int* oldValue, int newValue) {
   int j;
   cell->value = newValue;
 
@@ -329,7 +342,7 @@ inline void applyValue(cell_t* myCells, constraint_t* myConstraints, cell_t* cel
 // Restore a cell to its constraints
 // We may use myCells as a reference because only an individual processor
 // will ever call this function
-inline void restoreCellToConstraints(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int cellIndex, int oldValue) {
+void restoreCellToConstraints(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int cellIndex, int oldValue) {
   int i;
   constraint_t* constraint;
 
