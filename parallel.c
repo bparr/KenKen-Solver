@@ -127,12 +127,11 @@ void runParallel() {
   // All other threads loop
   while (!found) {
     while (getNextJob(myJob)) {
-
       // Apply job
       for (step = 0; step < jobLength; step++)
         applyValue(myCells, myConstraints, myJob[step].cellIndex, myJob[step].value);
 
-      // Begin computation
+      // Run algorithm
       if (solve(step, myCells, myConstraints))
         break;
 
@@ -214,9 +213,14 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   int cellIndex, i;
   int value = UNASSIGNED_VALUE;
 
-  if (step == totalNumCells || found) {
-    // Critical section that updates cells, and sets found to 1
-    #pragma omp single nowait
+  if (found)
+    return 1;
+  
+  if (step == totalNumCells) {
+    // Critical section that prints cells if a solution is found
+    // Note: this order allows for multiple solutions to get printed if
+    //       two processors reach this point while found = 0
+    #pragma omp critical
     {
       // Print solution if one found
       for (i = 0; i < totalNumCells; i++)
