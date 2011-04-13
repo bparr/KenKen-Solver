@@ -1,4 +1,4 @@
-all: parallelken
+all: parallel
 #debug: debug.parallelken
 
 CC = icc
@@ -8,10 +8,10 @@ DEBUGFLAGS = -openmp -g -Wall -Werror
 kenken: kenken.c kenken.h
 	$(CC) $(CFLAGS) -c kenken.c
 
-parallelken.o: parallelken.c kenken.h
-	$(CC) $(CFLAGS) -c parallelken.c
+parallel.o: parallel.c kenken.h
+	$(CC) $(CFLAGS) -c parallel.c
 
-parallelken: parallelken.o kenken.o
+parallel: parallel.o kenken.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 #debug.kenken: kenken.c kenken.h
@@ -23,4 +23,4 @@ parallelken: parallelken.o kenken.o
 #serial: serial.o kenken.o
 
 clean:
-	rm -f *.o parallelken debug.parallelken
+	rm -f *.o parallel debug.parallel
