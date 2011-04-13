@@ -16,9 +16,6 @@ cell_t* cells;
 constraint_t* constraints;
 
 int main(int argc, char **argv) {
-  int i;
-
-  // Check arguments
   if (argc != 2)
     usage(argv[0]);
 
@@ -28,10 +25,7 @@ int main(int argc, char **argv) {
   if (!solve(0))
     appError("No solution found");
 
-  // Print solution if one found
-  for (i = 0; i < totalNumCells; i++)
-    printf("%d%c", cells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
-
+  printSolution(cells);
   return 0;
 }
 
