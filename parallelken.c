@@ -13,7 +13,7 @@
 #include <omp.h>
 
 // Number of processors
-#define P 16
+#define P 32
 
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
@@ -150,12 +150,15 @@ int runParallel() {
       // Copy over job
       memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
       queueHead = INCREMENT(queueHead);
+			// Flush to guarantee value consistency across processors.
+			// TODO: check if this line is necessary
 			#pragma omp flush (queueHead)
     }
 
     // Apply job: Note that cellIndices align properly with system state
     // of cell/constraint modifications because the method for achieving their
     // values are similar to solving.
+		// TODO: optimize this portion to "smartly" do it based on previous job
     for (step = 0; step < jobLength; step++) {
       oldValue = UNASSIGNED_VALUE;
       jobStep = &myJob[step];
@@ -169,19 +172,9 @@ int runParallel() {
       applyValue(myCells, myConstraints, cell, &oldValue, jobStep->value);
     }
 
-		/*#pragma omp critical
-		{
-		int i;
-		printf("Thread %d working on: myCells %p\n", omp_get_thread_num(), myCells);
-  	for (i = 0; i < totalNumCells; i++)
-    	printf("%d%c", myCells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
-
-		printf("\n\n");
-		}*/
-
     // Begin computation
     if (solve(step, myCells, myConstraints)) {
-      // Copy answer to global cells
+      // If succeed, Copy answer to global cells
       #pragma omp single nowait
       {
         memcpy(cells, myCells, totalNumCells * sizeof(cell_t));
