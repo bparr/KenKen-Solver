@@ -96,7 +96,7 @@ void runParallel() {
 
   // Run algorithm
 #pragma omp parallel shared(queueHead, queueTail, found, cells, constraints, \
-                            maxMultiply, N, totalNumCells, numConstraints) \
+                            N, totalNumCells, numConstraints) \
                     private(myConstraints, myCells, myJob, step)
 {
   // Initialize our local copies of the data-structures
