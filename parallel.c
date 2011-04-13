@@ -112,6 +112,10 @@ void runParallel() {
   if (!myJob)
     unixError("Failed to allocate memory for myJob");
 
+  // Copy the data-structures into our own local copies
+	memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
+  memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
+
   // Begin finding jobs and running algorithm
   #pragma omp master
   {
@@ -124,10 +128,6 @@ void runParallel() {
     bzero(myJob, sizeof(job_t) * jobLength); // Zero out job
 
 		while (getNextJob(myJob)) {
-  		// Copy the data-structures into our own local copies
-			// Note: also resets the job
-		  memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
-  		memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
 
     	// Apply job
     	for (step = 0; step < jobLength; step++)
@@ -136,6 +136,10 @@ void runParallel() {
     	// Begin computation
     	if (solve(step, myCells, myConstraints))
       	break;
+
+			// Reset the job
+			memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
+  		memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
 		}
   }
   // Deallocate resources
