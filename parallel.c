@@ -1,7 +1,7 @@
 /** @file kenken.c
  *
  *  @brief Parallel implementation of a KenKen puzzle solver.
- *  
+ *
  *  Basic idea: Dedicate one processor for finding jobs and have the other
  *  processors work on the jobs as they come in. Jobs consist of setting
  *  n*n/2 squares (half the squares).
@@ -28,8 +28,8 @@ typedef struct job {
 // Algorithm functions
 void runParallel();
 int getNextJob(job_t* myJob);
-int fillJobs(int step, job_t* myJob, cell_t* myCells, 
-                                     constraint_t* myConstraints);
+int fillJobs(int step, job_t* myJob, cell_t* myCells,
+             constraint_t* myConstraints);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints);
 
 // Problem grid
@@ -129,7 +129,7 @@ void runParallel() {
     while (getNextJob(myJob)) {
       // Apply job
       for (step = 0; step < jobLength; step++)
-        applyValue(myCells, myConstraints, myJob[step].cellIndex, 
+        applyValue(myCells, myConstraints, myJob[step].cellIndex,
                                            myJob[step].value);
 
       // Run algorithm
@@ -167,7 +167,7 @@ int getNextJob(job_t* myJob) {
         // Copy over job
         memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
         queueHead = INCREMENT(queueHead);
-        
+
         // Successfully retrieved job
         gotJob = 1;
       }
@@ -178,17 +178,17 @@ int getNextJob(job_t* myJob) {
 }
 
 // Fills the job array. Returns 1 to end the filling, 0 to continue
-int fillJobs(int step, job_t* myJob, cell_t* myCells, 
-                                     constraint_t* myConstraints) {
+int fillJobs(int step, job_t* myJob, cell_t* myCells,
+             constraint_t* myConstraints) {
   int cellIndex;
   int value = UNASSIGNED_VALUE;
- 
+
   if (found || step == jobLength) {
     // Loop while buffer is full and no solution is found
-    while (!found && INCREMENT(queueTail) == queueHead); 
+    while (!found && INCREMENT(queueTail) == queueHead);
 
     // If we exited while because solution was found, exit
-    if (found) 
+    if (found)
       return 1;
 
     // Spot in the buffer freed up so set value as current job
@@ -201,7 +201,7 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells,
   if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
     return 0;
 
-  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints, 
+  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
                                                      cellIndex, value))) {
     myJob[step].cellIndex = cellIndex;
     myJob[step].value = value;
@@ -220,7 +220,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
 
   if (found)
     return 1;
-  
+
   if (step == totalNumCells) {
     // Critical section that prints cells if a solution is found
     #pragma omp critical
@@ -237,7 +237,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
     return 0;
 
-  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints, 
+  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
                                                      cellIndex, value))) {
     if (solve(step + 1, myCells, myConstraints))
       return 1;
@@ -245,3 +245,4 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
 
   return 0;
 }
+
