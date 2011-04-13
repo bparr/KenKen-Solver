@@ -28,7 +28,8 @@ typedef struct job {
 // Algorithm functions
 void runParallel();
 int getNextJob(job_t* myJob);
-int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints);
+int fillJobs(int step, job_t* myJob, cell_t* myCells, 
+                                     constraint_t* myConstraints);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints);
 
 // Problem grid
@@ -129,7 +130,8 @@ void runParallel() {
     while (getNextJob(myJob)) {
       // Apply job
       for (step = 0; step < jobLength; step++)
-        applyValue(myCells, myConstraints, myJob[step].cellIndex, myJob[step].value);
+        applyValue(myCells, myConstraints, myJob[step].cellIndex, 
+                                           myJob[step].value);
 
       // Run algorithm
       if (solve(step, myCells, myConstraints))
@@ -177,7 +179,8 @@ int getNextJob(job_t* myJob) {
 }
 
 // Fills the job array. Returns 1 to end the filling, 0 to continue
-int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints) {
+int fillJobs(int step, job_t* myJob, cell_t* myCells, 
+                                     constraint_t* myConstraints) {
   int cellIndex;
   int value = UNASSIGNED_VALUE;
  
@@ -199,7 +202,8 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
   if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
     return 0;
 
-  while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
+  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints, 
+                                                     cellIndex, value))) {
     myJob[step].cellIndex = cellIndex;
     myJob[step].value = value;
 
@@ -235,7 +239,8 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
     return 0;
 
-  while ((value = applyNextValue(myCells, myConstraints, cellIndex, value)) != UNASSIGNED_VALUE) {
+  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints, 
+                                                     cellIndex, value))) {
     if (solve(step + 1, myCells, myConstraints))
       return 1;
   }
