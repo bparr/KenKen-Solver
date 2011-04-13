@@ -5,16 +5,65 @@
 
 #include "kenken.h"
 
+// Maximum problem size supported by program
+#define MAX_PROBLEM_SIZE 25
 // Maximum line length of input file
 #define MAX_LINE_LEN 2048
 
+// Get cell at (x, y)
+#define GET_CELL(x, y) (N * (x) + (y))
 // Value of node at start and end of cell list
 #define END_NODE -1
 
-// Indexes of different types of constraints in cell_t constraint array
+// Different types of constraints in cell_t constraint array
+#define NUM_CELL_CONSTRAINTS 3
 #define ROW_CONSTRAINT_INDEX 0
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
+
+// Calculate the minimum of two numbers
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+// Calculate the maximum of two numbers
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+
+typedef enum {
+  LINE,
+  PLUS,
+  MINUS,
+  MULTIPLY,
+  DIVIDE,
+  SINGLE
+} type_t;
+
+typedef struct cellnode {
+  int previous;
+  int next;
+} cellnode_t;
+
+typedef struct celllist {
+  int start;
+  int size;
+  cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
+} celllist_t;
+
+struct constraint {
+  type_t type;
+  long value;
+  celllist_t cellList;
+};
+
+struct cell {
+  int value;
+  int numPossibles;
+  char possibles[MAX_PROBLEM_SIZE + 1];
+  int constraintIndexes[NUM_CELL_CONSTRAINTS];
+};
+
+
+// Max number by multiplying
+long* maxMultiply;
+
 
 // Update constraint from having a cell with value oldCellValue to having the
 // cell assigned newCellValue (valid cell values include UNASSIGNED_VALUE).
@@ -184,7 +233,7 @@ void initialize(char* file, cell_t** cellsPtr, constraint_t** constraintsPtr) {
   *cellsPtr = cells;
 }
 
-// TODO
+// Apply a value to a specific cell, updating its constraints
 inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
                        int value) {
   int i;
@@ -201,7 +250,8 @@ inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
   cell->value = value;
 }
 
-// TODO
+// Get the next cell to fill in, remove it from its constraints, and return its
+// index
 inline int getNextCellToFill(cell_t* cells, constraint_t* constraints) {
   int i, numPossibles;
   int minIndex = -1, minPossibles = INT_MAX;
@@ -238,7 +288,7 @@ inline int getNextCellToFill(cell_t* cells, constraint_t* constraints) {
   return minIndex;
 }
 
-// TODO
+// Apply and return next value for the cell currently filling in
 inline int applyNextValue(cell_t* cells, constraint_t* constraints,
                           int cellIndex, int previousValue) {
   int i;
@@ -247,7 +297,7 @@ inline int applyNextValue(cell_t* cells, constraint_t* constraints,
   constraint_t* constraint;
 
   for (; value > 0; value--) {
-    if (!IS_POSSIBLE(cell->possibles[value]))
+    if (cell->possibles[value] != NUM_CELL_CONSTRAINTS)
       continue;
 
     cell->value = value;
@@ -272,6 +322,14 @@ inline int applyNextValue(cell_t* cells, constraint_t* constraints,
   cell->value = UNASSIGNED_VALUE;
   return UNASSIGNED_VALUE;
 }
+
+// Print solution to stdout
+void printSolution(cell_t* cells) {
+  int i;
+  for (i = 0; i < totalNumCells; i++)
+    printf("%d%c", cells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
+}
+
 
 // Update constraint from having a cell with value oldCellValue to having the
 // cell assigned newCellValue (valid cell values include UNASSIGNED_VALUE).
@@ -535,14 +593,12 @@ inline void notifyCellsOfChange(cell_t* cells, celllist_t* cellList, int value,
 
   for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
     flag = cells[i].possibles[value];
-    if (IS_POSSIBLE(flag))
+    if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
+      cells[i].numPossibles++;
+    if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
       cells[i].numPossibles--;
 
-    flag += (char)(markPossible ? 1 : -1);
-    cells[i].possibles[value] = flag;
-
-    if (IS_POSSIBLE(flag))
-      cells[i].numPossibles++;
+    cells[i].possibles[value] = flag + (char)(markPossible ? 1 : -1);
   }
 }
 
@@ -559,14 +615,12 @@ inline void notifyCellsOfChanges(cell_t* cells, celllist_t* cellList,
 
     for (j = start; j <= end; j++) {
       flag = cells[i].possibles[j];
-      if (IS_POSSIBLE(flag))
+      if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
+        num++;
+      if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
         num--;
 
-      flag += (char)(markPossible ? 1 : -1);
-      cells[i].possibles[j] = flag;
-
-      if (IS_POSSIBLE(flag))
-        num++;
+      cells[i].possibles[j] = flag + (char)(markPossible ? 1 : -1);
     }
 
     cells[i].numPossibles = num;
