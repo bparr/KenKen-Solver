@@ -6,13 +6,13 @@ CFLAGS = -openmp -O
 DEBUGFLAGS = -openmp -g -Wall -Werror
 
 kenken: kenken.c kenken.h
-	$(CC) $(DEBUGFLAGS) -c kenken.c
+	$(CC) $(CFLAGS) -c kenken.c
 
 parallelken.o: parallelken.c kenken.h
-	$(CC) $(DEBUGFLAGS) -c parallelken.c
+	$(CC) $(CFLAGS) -c parallelken.c
 
 parallelken: parallelken.o kenken.o
-	$(CC) $(DEBUGFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 #debug.kenken: kenken.c kenken.h
 #	$(CC) $(DEBUGFLAGS) -c kenken.c

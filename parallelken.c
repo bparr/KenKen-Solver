@@ -27,8 +27,8 @@ typedef struct job {
 
 // Algorithm functions
 int runParallel();
-int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints, int* tail, int* head, int* found);
-int solve(int step, cell_t* myCells, constraint_t* myConstraints, int* found);
+int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints);
+int solve(int step, cell_t* myCells, constraint_t* myConstraints);
 inline void removeCellFromConstraints(constraint_t* myConstraints, cell_t* cell, int cellIndex);
 inline void applyValue(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int* oldValue, int newValue);
 inline void restoreCellToConstraints(cell_t* myCells, constraint_t* myConstraints, cell_t* cell, int cellIndex, int oldValue);
@@ -43,10 +43,16 @@ int maxJobs;
 int jobLength;
 // Job queue
 job_t* jobs;
+// Index to the head of the queue
+int queueHead;
+// Index to the tail of the queue
+int queueTail;
+// Flag to mark if a solution is found by a processor
+int found;
 
 int main(int argc, char **argv)
 {
-	int i;
+  int i;
 
   constraints = NULL;
   cells = NULL;
@@ -64,6 +70,9 @@ int main(int argc, char **argv)
   jobs = (job_t*)calloc(sizeof(job_t), jobLength * maxJobs);
   if (!jobs)
     unixError("Failed to allocated memory for the job queue");
+
+	queueHead = 0;
+	queueTail = 0;
 
   // Run algorithm
   if (!runParallel())
@@ -83,22 +92,22 @@ int main(int argc, char **argv)
 
 // Sets up and runs the parallel kenken solver
 int runParallel() {
-  int step, i;
+  int step;
   job_t* myJob, *jobStep;
   cell_t* cell, *myCells;
-	constraint_t* myConstraints;
+  constraint_t* myConstraints;
   int cellIndex, oldValue;
-	int queueHead = 0, queueTail = 0, found;
 
   // Begin parallel
   omp_set_num_threads(P);
 
   // Run algorithm
 #pragma omp parallel shared(queueHead, queueTail, found, cells, constraints) \
-										private(myConstraints, myCells, myJob, jobStep, \
+                    private(myConstraints, myCells, myJob, jobStep, \
                             cellIndex, cell, oldValue, step)
 {
   found = 0;
+	#pragma omp flush (queueHead, queueTail, found, cells, constraints)
 
   // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
@@ -120,7 +129,7 @@ int runParallel() {
   // Begin finding jobs and running algorithm
   #pragma omp single nowait
   {
-    fillJobs(0, myJob, myCells, myConstraints, &queueTail, &queueHead, &found);
+    fillJobs(0, myJob, myCells, myConstraints);
     // After filling jobs, thread should go and help compute remaining jobs
   }
 
@@ -138,9 +147,8 @@ int runParallel() {
       // Copy over job
       memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
       queueHead = INCREMENT(queueHead);
+			#pragma omp flush (queueHead)
     }
-
-		printf ("%d beginning a job\n", omp_get_thread_num());
 
     // Apply job: Note that cellIndices align properly with system state
     // of cell/constraint modifications because the method for achieving their
@@ -159,22 +167,17 @@ int runParallel() {
     }
 
     // Begin computation
-    if (solve(step, myCells, myConstraints, &found)) {
-			printf("thread %d found a solution!!\n", omp_get_thread_num());
+    if (solve(step, myCells, myConstraints)) {
       // Copy answer to global cells
       #pragma omp single nowait
       {
-  			// Print solution if one found
-  			for (i = 0; i < totalNumCells; i++)
-    			printf("%d%c", myCells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
-        // Locked in critical just in case multiple threads found
-        // a solution at the same time. (Note: this is only time data is
-        // written to the global cells array)
         memcpy(cells, myCells, totalNumCells * sizeof(cell_t));
+				#pragma omp flush (cells)
       }
 
       // Set found
       found = 1;
+			#pragma omp flush (found)
       break;
     }
 
@@ -203,26 +206,26 @@ int runParallel() {
 }
 
 // Fills the job array. Returns 1 to end the filling, 0 to continue
-int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints, int* tail, int* head, int* found) {
+int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraints) {
   int i, oldValue = UNASSIGNED_VALUE;
   cell_t* cell; 
   int nextCellIndex;
  
-  if (*found)
+  if (found)
     return 1;
 
   if (step == jobLength) {
     // Loop while buffer is full and no solution is found
-    while (!(*found) && INCREMENT(*tail) == *head)
+    while (!found && INCREMENT(queueTail) == queueHead)
 
     // If we exited while because solution was found, exit
-    if (*found) 
+    if (found) 
       return 1;
 
     // Spot in the buffer freed up so set value as current job
-    memcpy(&jobs[GET_JOB(*tail)], myJob, sizeof(job_t) * jobLength);
-    *tail = INCREMENT(*tail);
-    printf("job inserted into the queue: *tail = %d, *head = %d\n", *tail, *head);
+    memcpy(&jobs[GET_JOB(queueTail)], myJob, sizeof(job_t) * jobLength);
+    queueTail = INCREMENT(queueTail);
+		#pragma omp flush (jobs,queueTail)
     return 0;
   }
 
@@ -249,7 +252,7 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     // Set job values
     applyValue(myCells, myConstraints, cell, &oldValue, i);
     
-    if (fillJobs(step + 1, myJob, myCells, myConstraints, tail, head, found))
+    if (fillJobs(step + 1, myJob, myCells, myConstraints))
       return 1;
   }
  
@@ -257,7 +260,7 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
   restoreCellToConstraints(myCells, myConstraints, cell, nextCellIndex, oldValue);
 
   // Reset job step values
-  myJob[step].cellIndex = -1;
+  myJob[step].cellIndex = 0;
   myJob[step].value = UNASSIGNED_VALUE;
 
   // Unassign value and fail if none of possibilities worked
@@ -266,12 +269,12 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
 }
 
 // Main recursive function used to solve the program
-int solve(int step, cell_t* myCells, constraint_t* myConstraints, int* found) {
+int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   int i, nextCellIndex, oldValue = UNASSIGNED_VALUE;
   cell_t* cell;
 
   // Success if all cells filled in. Or if another processor found a solution
-  if (step == totalNumCells || *found == 1)
+  if (step == totalNumCells || found == 1)
     return 1;
 
   nextCellIndex = findNextCell(myCells);
@@ -291,7 +294,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints, int* found) {
 
     applyValue(myCells, myConstraints, cell, &oldValue, i);
     
-    if (solve(step + 1, myCells, myConstraints, found)) 
+    if (solve(step + 1, myCells, myConstraints)) 
       return 1;
   }
   
