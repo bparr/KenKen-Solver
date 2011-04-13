@@ -13,7 +13,7 @@
 #include <omp.h>
 
 // Number of processors
-#define P 16
+#define P 32
 
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
@@ -108,7 +108,6 @@ int runParallel() {
                             cellIndex, cell, oldValue, step)
 {
   found = 0;
-	#pragma omp flush (queueHead, queueTail, found, cells, constraints)
 
   // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
@@ -150,9 +149,6 @@ int runParallel() {
       // Copy over job
       memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
       queueHead = INCREMENT(queueHead);
-			// Flush to guarantee value consistency across processors.
-			// TODO: check if this line is necessary
-			#pragma omp flush (queueHead)
     }
 
     // Apply job: Note that cellIndices align properly with system state
@@ -178,12 +174,10 @@ int runParallel() {
       #pragma omp single nowait
       {
         memcpy(cells, myCells, totalNumCells * sizeof(cell_t));
-				#pragma omp flush (cells)
       }
 
       // Set found
       found = 1;
-			#pragma omp flush (found)
       break;
     }
 
@@ -233,7 +227,6 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     // Spot in the buffer freed up so set value as current job
     memcpy(&jobs[GET_JOB(queueTail)], myJob, sizeof(job_t) * jobLength);
     queueTail = INCREMENT(queueTail);
-		#pragma omp flush (jobs,queueTail)
     return 0;
   }
 
@@ -266,10 +259,6 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
  
   // Restore cell to its constraints
   restoreCellToConstraints(myCells, myConstraints, cell, nextCellIndex, oldValue);
-
-  // Reset job step values
-  myJob[step].cellIndex = 0;
-  myJob[step].value = UNASSIGNED_VALUE;
 
   // Unassign value and fail if none of possibilities worked
   cell->value = UNASSIGNED_VALUE;
