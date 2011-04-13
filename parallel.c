@@ -218,8 +218,6 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   
   if (step == totalNumCells) {
     // Critical section that prints cells if a solution is found
-    // Note: this order allows for multiple solutions to get printed if
-    //       two processors reach this point while found = 0
     #pragma omp critical
     {
       // Print solution if one found
