@@ -16,6 +16,7 @@
 #define MAX_PROBLEM_SIZE 25
 // Value used to indicate a cell's value is unassigned
 #define UNASSIGNED_VALUE 0
+// TODO move into .c
 // Number of constraints a cell has (1 row constraint, 1 column constraint,
 // 1 block constraint)
 #define NUM_CELL_CONSTRAINTS 3
@@ -31,6 +32,7 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 
+// TODO just move into .c?
 typedef enum {
   LINE,
   PLUS,
@@ -71,6 +73,7 @@ int N;
 int totalNumCells;
 // Number of constraints
 int numConstraints;
+// TODO move into .c
 // Max number by multiplying
 long* maxMultiply;
 
@@ -80,18 +83,16 @@ long* maxMultiply;
 // The constraints and cells results can be memcpy'ed if need be.
 void initialize(char* file, cell_t** cellPtr, constraint_t** constraintsPtr);
 
-// Find next cell to assign a value to. Return -1 if puzzle is impossible.
-int findNextCell(cell_t* cells);
+// TODO
+inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
+                       int value);
 
-// Add and remove a cell from a constraint. Note, this purely changes the
-// internal list of cells, and not the value of the constraint.
-inline void addCellToConstraint(constraint_t* constraint, int cellIndex);
-inline void removeCellFromConstraint(constraint_t* constraint, int cellIndex);
+// TODO
+inline int getNextCellToFill(cell_t* cells, constraint_t* constraints);
 
-// Update constraint from having a cell with value oldCellValue to having the
-// cell assigned newCellValue (valid cell values include UNASSIGNED_VALUE).
-inline void updateConstraint(cell_t* cells, constraint_t* constraint,
-                             int oldCellValue, int newCellValue);
+// TODO
+inline int applyNextValue(cell_t* cells, constraint_t* constraints,
+                          int cellIndex, int previousValue);
 
 
 // Print an application error, and exit

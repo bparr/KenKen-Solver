@@ -37,56 +37,23 @@ int main(int argc, char **argv) {
 
 // Main recursive function used to solve the program
 int solve(int step) {
-  int i, j, nextCellIndex, oldValue = UNASSIGNED_VALUE;
-  constraint_t* constraint;
-  cell_t* cell;
+  int cellIndex;
+  int value = UNASSIGNED_VALUE;
 
   // Success if all cells filled in
   if (step == totalNumCells)
     return 1;
 
-  nextCellIndex = findNextCell(cells);
-  if (nextCellIndex < 0)
+  cellIndex = getNextCellToFill(cells, constraints);
+  if (cellIndex < 0)
     return 0;
 
-  // Use the found cell as the next cell to fill
-  cell = &(cells[nextCellIndex]);
-
-  // Remove cell from its constraints
-  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
-    constraint = &(constraints[cell->constraintIndexes[i]]);
-    removeCellFromConstraint(constraint, nextCellIndex);
-  }
-
-  // Try all possible values for next cell
-  for (i = N; i > 0; i--) {
-    if (!(IS_POSSIBLE(cell->possibles[i])))
-      continue;
-
-    cell->value = i;
-
-    for (j = 0; j < NUM_CELL_CONSTRAINTS; j++) {
-      constraint = &(constraints[cell->constraintIndexes[j]]);
-      updateConstraint(cells, constraint, oldValue, i);
-    }
-    oldValue = i;
-
+  while (UNASSIGNED_VALUE != (value = applyNextValue(cells, constraints,
+                                                     cellIndex, value))) {
     if (solve(step + 1))
       return 1;
   }
 
-  // Add cell back to its constraints
-  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
-    constraint = &(constraints[cell->constraintIndexes[i]]);
-    updateConstraint(cells, constraint, oldValue, UNASSIGNED_VALUE);
-
-    // Add cell back to cell list after updating constraint so cell's
-    // possibles are not changed during the update
-    addCellToConstraint(constraint, nextCellIndex);
-  }
-
-  // Unassign value and fail if none of possibilities worked
-  cell->value = UNASSIGNED_VALUE;
   return 0;
 }
 
