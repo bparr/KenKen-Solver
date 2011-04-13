@@ -80,7 +80,6 @@ int main(int argc, char **argv)
   // Free allocated memory
   free(cells);
   free(constraints);
-  free(maxMultiply);
 
   return 0;
 }
@@ -216,7 +215,7 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells,
 
 // Main recursive function used to solve the program
 int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
-  int cellIndex, i;
+  int cellIndex;
   int value = UNASSIGNED_VALUE;
 
   if (found)
@@ -227,8 +226,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
     #pragma omp critical
     {
       // Print solution if one found
-      for (i = 0; i < totalNumCells; i++)
-        printf("%d%c", myCells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
+      printSolution(myCells);
     }
 
     found = 1;
