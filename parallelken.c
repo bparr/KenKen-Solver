@@ -13,7 +13,7 @@
 #include <omp.h>
 
 // Number of processors
-#define P 32
+#define P 16
 
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
   // Always keeps one block in the array empty. This is necessary because of
   // the concurrent access. Readers modify end, writer modifies start.
   // Inherently thread-safe as long as reader's access is controlled.
-  jobLength = (N*N)/2; // Half the cells filled in
+  jobLength = N; // Half the cells filled in
   maxJobs = N*N;
 
   jobs = (job_t*)calloc(sizeof(job_t), jobLength * maxJobs);
@@ -132,6 +132,7 @@ int runParallel() {
   {
     fillJobs(0, myJob, myCells, myConstraints);
     // After filling jobs, thread should go and help compute remaining jobs
+		printf("done filling jobs\n");
   }
 
   // All other threads loop
@@ -154,6 +155,14 @@ int runParallel() {
 			// TODO: check if this line is necessary
 			#pragma omp flush (queueHead)
     }
+
+		#pragma omp critical
+		{
+		printf("%d head: %d tail: %d working on : ", omp_get_thread_num(), queueHead, queueTail);
+		for (step = 0; step < jobLength; step++)
+			printf("%d:%d  ", myJob[step].cellIndex, myJob[step].value);
+		printf("\n\n");
+		}
 
     // Apply job: Note that cellIndices align properly with system state
     // of cell/constraint modifications because the method for achieving their
@@ -222,7 +231,9 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
 
   if (step == jobLength) {
     // Loop while buffer is full and no solution is found
-    while (!found && INCREMENT(queueTail) == queueHead);
+    while (!found && INCREMENT(queueTail) == queueHead) {
+			sleep(0);
+		}
 
     // If we exited while because solution was found, exit
     if (found) 
@@ -231,6 +242,7 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells, constraint_t* myConstraint
     // Spot in the buffer freed up so set value as current job
     memcpy(&jobs[GET_JOB(queueTail)], myJob, sizeof(job_t) * jobLength);
     queueTail = INCREMENT(queueTail);
+		printf("%d job added to queue with head: %d and tail: %d\n", omp_get_thread_num(), queueHead, queueTail);
 		#pragma omp flush (jobs,queueTail)
     return 0;
   }
