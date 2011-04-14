@@ -1,27 +1,21 @@
-all: serial parallel
-#debug: debug.parallel
 
-CC = icc
-CFLAGS = -openmp -O
-DEBUGFLAGS = -openmp -g -Wall -Werror
+all: serial
+#debug: debug.kenken
 
-kenken.o: kenken.c kenken.h
+CC = gcc
+CFLAGS = -O
+DEBUGFLAGS = -g -Wall -Werror
+
+kenken: kenken.c kenken.h
 	$(CC) $(CFLAGS) -c kenken.c
 
-parallel.o: parallel.c kenken.h
-	$(CC) $(CFLAGS) -c parallel.c
-
-parallel: parallel.o kenken.o
-	$(CC) $(CFLAGS) $^ -o $@
-
-#debug.parallel: kenken.c kenken.h
+#debug.kenken: kenken.c kenken.h
 #	$(CC) $(DEBUGFLAGS) -c kenken.c
 
 serial.o: serial.c kenken.h
 	$(CC) $(CFLAGS) -c serial.c
 
 serial: serial.o kenken.o
-	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f *.o serial parallel
+	rm -f *.o kenken serial
