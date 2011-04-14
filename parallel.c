@@ -2,18 +2,11 @@
  *
  *  @brief Parallel implementation of a KenKen puzzle solver.
  *
- *  Basic idea: Dedicate one processor for finding jobs and have the other
- *  processors work on the jobs as they come in. Jobs consist of setting
- *  n*n/2 squares (half the squares).
- *
  *  @author Jonathan Park (jjp1) and Ben Parr (bparr)
  */
 
 #include "kenken.h"
 #include <omp.h>
-
-// Number of processors
-#define P 32
 
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (maxJobs))
@@ -26,11 +19,13 @@ typedef struct job {
 } job_t;
 
 // Algorithm functions
-void runParallel();
+void runParallel(unsigned P);
 int getNextJob(job_t* myJob);
 int fillJobs(int step, job_t* myJob, cell_t* myCells,
              constraint_t* myConstraints);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints);
+void usage(char* program);
+
 
 // Problem grid
 cell_t* cells;
@@ -51,13 +46,11 @@ volatile int found;
 
 int main(int argc, char **argv)
 {
-  int i;
-
-  constraints = NULL;
-  cells = NULL;
+  if (argc != 3)
+    usage(argv[0]);
 
   // Initialize global variables and data-structures.
-  initialize(argv[1], &cells, &constraints);
+  initialize(argv[2], &cells, &constraints);
 
   // Initialize job queue (implemented as a circular array)
   // Always keeps one block in the array empty. This is necessary because of
@@ -75,7 +68,7 @@ int main(int argc, char **argv)
   found = 0;
 
   // Run algorithm
-  runParallel();
+  runParallel(atoi(argv[1]));
 
   // Free allocated memory
   free(cells);
@@ -85,7 +78,7 @@ int main(int argc, char **argv)
 }
 
 // Sets up and runs the parallel kenken solver
-void runParallel() {
+void runParallel(unsigned P) {
   int step;
   job_t* myJob;
   cell_t* myCells;
@@ -244,5 +237,11 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   }
 
   return 0;
+}
+
+// Print usage information and exit
+void usage(char* program) {
+  printf("Usage: %s P filename\n", program);
+  exit(0);
 }
 
