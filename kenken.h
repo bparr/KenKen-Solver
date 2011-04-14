@@ -20,16 +20,6 @@
 // 1 block constraint)
 #define NUM_CELL_CONSTRAINTS 3
 
-// Get cell at (x, y)
-#define GET_CELL(x, y) (N * (x) + (y))
-// Whether or not a specific cell value is possible
-#define IS_POSSIBLE(n) (n == NUM_CELL_CONSTRAINTS)
-
-// Calculate the minimum of two numbers
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-// Calculate the maximum of two numbers
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
 
 typedef enum {
   LINE,
@@ -71,8 +61,6 @@ int N;
 int totalNumCells;
 // Number of constraints
 int numConstraints;
-// Max number by multiplying
-long* maxMultiply;
 
 
 // Given an input file name, initialize cells and constraints and global
@@ -80,18 +68,24 @@ long* maxMultiply;
 // The constraints and cells results can be memcpy'ed if need be.
 void initialize(char* file, cell_t** cellPtr, constraint_t** constraintsPtr);
 
-// Find next cell to assign a value to. Return -1 if puzzle is impossible.
-int findNextCell(cell_t* cells);
+// Apply a value to a specific cell, updating its constraints
+inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
+                       int value);
 
-// Add and remove a cell from a constraint. Note, this purely changes the
-// internal list of cells, and not the value of the constraint.
-inline void addCellToConstraint(constraint_t* constraint, int cellIndex);
-inline void removeCellFromConstraint(constraint_t* constraint, int cellIndex);
+// Get the next cell to fill in, remove it from its constraints, and return its
+// index. The next cell is unassigned cell with the minimum number of
+// possibilities. If puzzle is in impossible state return -1.
+inline int getNextCellToFill(cell_t* cells, constraint_t* constraints);
 
-// Update constraint from having a cell with value oldCellValue to having the
-// cell assigned newCellValue (valid cell values include UNASSIGNED_VALUE).
-inline void updateConstraint(cell_t* cells, constraint_t* constraint,
-                             int oldCellValue, int newCellValue);
+// Apply and return next value for the cell currently filling in. On first time
+// called for a specific cell, previousValue should be UNASSIGNED_VALUE. When
+// there are no more values to fill in, unassign the value, add the cell back
+// to its constraints and return UNASSIGNED_VALUE.
+inline int applyNextValue(cell_t* cells, constraint_t* constraints,
+                          int cellIndex, int previousValue);
+
+// Print solution to stdout
+void printSolution(cell_t* cells);
 
 
 // Print an application error, and exit

@@ -8,6 +8,8 @@
 // Maximum line length of input file
 #define MAX_LINE_LEN 2048
 
+// Get cell at (x, y)
+#define GET_CELL(x, y) (N * (x) + (y))
 // Value of node at start and end of cell list
 #define END_NODE -1
 
@@ -16,6 +18,20 @@
 #define COLUMN_CONSTRAINT_INDEX 1
 #define BLOCK_CONSTRAINT_INDEX 2
 
+// Calculate the minimum of two numbers
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+// Calculate the maximum of two numbers
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+
+// Max number by multiplying
+long* maxMultiply;
+
+
+// Update constraint from having a cell with value oldCellValue to having the
+// cell assigned newCellValue (valid cell values include UNASSIGNED_VALUE).
+inline void updateConstraint(cell_t* cells, constraint_t* constraint,
+                             int oldCellValue, int newCellValue);
 
 // Funtions to initialize line constraints
 void initRowConstraint(cell_t* cells, constraint_t* constraints,
@@ -180,12 +196,30 @@ void initialize(char* file, cell_t** cellsPtr, constraint_t** constraintsPtr) {
   *cellsPtr = cells;
 }
 
+// Apply a value to a specific cell, updating its constraints
+inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
+                       int value) {
+  int i;
+  cell_t* cell = &(cells[cellIndex]);
+  constraint_t* constraint;
 
-// Find next cell to assign a value to. Return -1 if puzzle is impossible.
-int findNextCell(cell_t* cells) {
+  // Remove cell from its constraints, and update constraint
+  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
+    constraint = &(constraints[cell->constraintIndexes[i]]);
+    removeNode(&(constraint->cellList), cellIndex);
+    updateConstraint(cells, constraint, UNASSIGNED_VALUE, value);
+  }
+
+  cell->value = value;
+}
+
+// Get the next cell to fill in, remove it from its constraints, and return its
+// index
+inline int getNextCellToFill(cell_t* cells, constraint_t* constraints) {
   int i, numPossibles;
   int minIndex = -1, minPossibles = INT_MAX;
   cell_t* cell;
+  constraint_t* constraint;
 
   // Find the unassigned cell with the mininum number of possibilities
   for (i = 0; i < totalNumCells; i++) {
@@ -207,18 +241,58 @@ int findNextCell(cell_t* cells) {
     }
   }
 
+  // Remove cell from its constraints in preparation for updating
+  cell = &(cells[minIndex]);
+  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
+    constraint = &(constraints[cell->constraintIndexes[i]]);
+    removeNode(&(constraint->cellList), minIndex);
+  }
+
   return minIndex;
 }
 
-// Add a cell to a constraint's internal list
-inline void addCellToConstraint(constraint_t* constraint, int cellIndex) {
-  addNode(&(constraint->cellList), cellIndex);
+// Apply and return next value for the cell currently filling in
+inline int applyNextValue(cell_t* cells, constraint_t* constraints,
+                          int cellIndex, int previousValue) {
+  int i;
+  int value = (previousValue != UNASSIGNED_VALUE) ? previousValue - 1 : N;
+  cell_t* cell = &(cells[cellIndex]);
+  constraint_t* constraint;
+
+  for (; value > 0; value--) {
+    if (cell->possibles[value] != NUM_CELL_CONSTRAINTS)
+      continue;
+
+    cell->value = value;
+
+    for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
+      constraint = &(constraints[cell->constraintIndexes[i]]);
+      updateConstraint(cells, constraint, previousValue, value);
+    }
+
+    return value;
+  }
+
+  for (i = 0; i < NUM_CELL_CONSTRAINTS; i++) {
+    constraint = &(constraints[cell->constraintIndexes[i]]);
+    updateConstraint(cells, constraint, previousValue, UNASSIGNED_VALUE);
+
+    // Add cell back to cell list after updating constraint so cell's
+    // possibles are not changed during the update
+    addNode(&(constraint->cellList), cellIndex);
+  }
+
+  cell->value = UNASSIGNED_VALUE;
+  return UNASSIGNED_VALUE;
 }
 
-// Remove a cell from a constraint's internal list
-inline void removeCellFromConstraint(constraint_t* constraint, int cellIndex) {
-  removeNode(&(constraint->cellList), cellIndex);
+// Print solution to stdout
+void printSolution(cell_t* cells) {
+  int i;
+  for (i = 0; i < totalNumCells; i++)
+    printf("%d%c", cells[i].value, ((i + 1) % N != 0) ? ' ' : '\n');
 }
+
 
 // Update constraint from having a cell with value oldCellValue to having the
 // cell assigned newCellValue (valid cell values include UNASSIGNED_VALUE).
@@ -482,14 +556,12 @@ inline void notifyCellsOfChange(cell_t* cells, celllist_t* cellList, int value,
 
   for (i = cellList->start; i != END_NODE; i = (cellList->cells[i]).next) {
     flag = cells[i].possibles[value];
-    if (IS_POSSIBLE(flag))
+    if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
+      cells[i].numPossibles++;
+    if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
       cells[i].numPossibles--;
 
-    flag += (char)(markPossible ? 1 : -1);
-    cells[i].possibles[value] = flag;
-
-    if (IS_POSSIBLE(flag))
-      cells[i].numPossibles++;
+    cells[i].possibles[value] = (char)(flag + (markPossible ? 1 : -1));
   }
 }
 
@@ -506,14 +578,12 @@ inline void notifyCellsOfChanges(cell_t* cells, celllist_t* cellList,
 
     for (j = start; j <= end; j++) {
       flag = cells[i].possibles[j];
-      if (IS_POSSIBLE(flag))
+      if (markPossible && flag == NUM_CELL_CONSTRAINTS - 1)
+        num++;
+      if (!markPossible && flag == NUM_CELL_CONSTRAINTS)
         num--;
 
-      flag += (char)(markPossible ? 1 : -1);
-      cells[i].possibles[j] = flag;
-
-      if (IS_POSSIBLE(flag))
-        num++;
+      cells[i].possibles[j] = (char)(flag + (markPossible ? 1 : -1));
     }
 
     cells[i].numPossibles = num;
