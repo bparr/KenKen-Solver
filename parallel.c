@@ -104,7 +104,11 @@ void runParallel(unsigned P) {
   // Begin finding jobs and running algorithm
   // After filling jobs, thread should go and help compute remaining jobs
   #pragma omp master
+  {
+    memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
+    memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
     fillJobs(0, myJob, myCells, myConstraints);
+  }
 
   // Get and complete new job until none left, or solution found
   while (getNextJob(myJob)) {
