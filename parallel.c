@@ -85,9 +85,7 @@ void runParallel(unsigned P) {
   omp_set_num_threads(P);
 
   // Run algorithm
-#pragma omp parallel shared(queueHead, queueTail, found, cells, constraints, \
-                            N, totalNumCells, numConstraints) \
-                    private(myConstraints, myCells, myJob, i)
+#pragma omp parallel default(shared) private(i, myConstraints, myCells, myJob)
 {
   // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
