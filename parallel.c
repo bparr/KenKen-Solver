@@ -56,8 +56,8 @@ int main(int argc, char **argv)
   // Always keeps one block in the array empty. This is necessary because of
   // the concurrent access. Readers modify end, writer modifies start.
   // Inherently thread-safe as long as reader's access is controlled.
-  jobLength = N; // Half the cells filled in
-  maxJobs = N*N;
+  jobLength = N;
+  maxJobs = N * N;
 
   jobs = (job_t*)calloc(sizeof(job_t), jobLength * maxJobs);
   if (!jobs)
@@ -67,19 +67,16 @@ int main(int argc, char **argv)
   queueTail = 0;
   found = 0;
 
-  // Run algorithm
   runParallel(atoi(argv[1]));
-
-  // Free allocated memory
-  free(cells);
-  free(constraints);
+  if (!found)
+    appError("No solution found");
 
   return 0;
 }
 
 // Sets up and runs the parallel kenken solver
 void runParallel(unsigned P) {
-  int step;
+  int i;
   job_t* myJob;
   cell_t* myCells;
   constraint_t* myConstraints;
@@ -90,7 +87,7 @@ void runParallel(unsigned P) {
   // Run algorithm
 #pragma omp parallel shared(queueHead, queueTail, found, cells, constraints, \
                             N, totalNumCells, numConstraints) \
-                    private(myConstraints, myCells, myJob, step)
+                    private(myConstraints, myCells, myJob, i)
 {
   // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
@@ -105,41 +102,23 @@ void runParallel(unsigned P) {
   if (!myJob)
     unixError("Failed to allocate memory for myJob");
 
-  // Copy the data-structures into our own local copies
-  memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
-  memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
-  bzero(myJob, sizeof(job_t) * jobLength); // Zero out job
 
   // Begin finding jobs and running algorithm
+  // After filling jobs, thread should go and help compute remaining jobs
   #pragma omp master
-  {
     fillJobs(0, myJob, myCells, myConstraints);
-    // After filling jobs, thread should go and help compute remaining jobs
+
+  // Get and complete new job until none left, or solution found
+  while (getNextJob(myJob)) {
+    memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
+    memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
+
+    for (i = 0; i < jobLength; i++)
+      applyValue(myCells, myConstraints, myJob[i].cellIndex, myJob[i].value);
+
+    solve(jobLength, myCells, myConstraints);
   }
-
-  // All other threads loop
-  while (!found) {
-    while (getNextJob(myJob)) {
-      // Apply job
-      for (step = 0; step < jobLength; step++)
-        applyValue(myCells, myConstraints, myJob[step].cellIndex,
-                                           myJob[step].value);
-
-      // Run algorithm
-      if (solve(step, myCells, myConstraints))
-        break;
-
-      // Reset the job
-      memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
-      memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
-    }
-  }
-  // Deallocate resources
-  free(myJob);
-  free(myConstraints);
-  free(myCells);
 }
-
 }
 
 // Retrieves the next job from the job array. Will block until a job is
@@ -153,7 +132,7 @@ int getNextJob(job_t* myJob) {
     if (found)
       return 0;
 
-    // Only one processor should proceed to the critical section at a time
+    // Only one processor should actually get the job
     #pragma omp critical
     {
       if (queueHead != queueTail && !found) {
@@ -176,7 +155,10 @@ int fillJobs(int step, job_t* myJob, cell_t* myCells,
   int cellIndex;
   int value = UNASSIGNED_VALUE;
 
-  if (found || step == jobLength) {
+  if (found)
+    return 1;
+
+  if (step == jobLength) {
     // Loop while buffer is full and no solution is found
     while (!found && INCREMENT(queueTail) == queueHead);
 
@@ -218,11 +200,12 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
     // Critical section that prints cells if a solution is found
     #pragma omp critical
     {
-      // Print solution if one found
-      printSolution(myCells);
+      if (!found) {
+        printSolution(myCells);
+        found = 1;
+      }
     }
 
-    found = 1;
     return 1;
   }
 
