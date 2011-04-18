@@ -5,7 +5,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include "kenken.h"
+
+// Calculate number of milliseconds between two timevals
+#define TIME_DIFF(b, a) (((b).tv_sec - (a).tv_sec) * 1000.0 + \
+                         ((b).tv_usec - (a).tv_usec) / 1000.0)
 
 int solve(int step);
 void usage(char* program);
@@ -16,16 +21,35 @@ cell_t* cells;
 constraint_t* constraints;
 
 int main(int argc, char **argv) {
+  struct timeval startTime, endTime;
+  struct timeval compStartTime;
+  double totalTime, compTime;
+
   if (argc != 2)
     usage(argv[0]);
 
+  // Record start of total time
+  gettimeofday(&startTime, NULL);
+
   initialize(argv[1], &cells, &constraints);
 
+  //Record start of Computation time
+  gettimeofday(&compStartTime, NULL);
+  
   // Run algorithm
   if (!solve(0))
     appError("No solution found");
 
+  gettimeofday(&endTime, NULL);
   printSolution(cells);
+
+  compTime = TIME_DIFF(endTime, compStartTime);
+  totalTime = TIME_DIFF(endTime, startTime);
+
+  // Print out calculated times
+  printf("Computation Time = %.3f millisecs\n", compTime);
+  printf("      Total Time = %.3f millisecs\n", totalTime);
+
   return 0;
 }
 
