@@ -38,6 +38,7 @@ int solve(int step) {
   if (step == totalNumCells)
     return 1;
 
+  // Find the next cell to fill and test all possible values
   if ((cellIndex = getNextCellToFill(cells, constraints)) < 0)
     return 0;
 
