@@ -38,8 +38,7 @@ int solve(int step) {
   if (step == totalNumCells)
     return 1;
 
-  cellIndex = getNextCellToFill(cells, constraints);
-  if (cellIndex < 0)
+  if ((cellIndex = getNextCellToFill(cells, constraints)) < 0)
     return 0;
 
   while (UNASSIGNED_VALUE != (value = applyNextValue(cells, constraints,
