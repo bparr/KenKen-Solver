@@ -1,0 +1,23 @@
+#!/bin/csh
+#PBS -l ncpus=16
+#ncpus must be a multiple of 16
+#PBS -l walltime=45:00
+#PBS -j oe
+#PBS -q batch
+
+set echo
+
+ja
+
+#move to my $SCRATCH directory
+cd $SCRATCH
+
+#copy executable to $SCRATCH
+cp $HOME/kenken/serial serial33
+cp $HOME/kenken/input/33minutes.txt	33minutes.txt
+
+
+#run my executable
+time ./serial33 33minutes.txt
+
+ja -chlst
