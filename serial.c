@@ -19,6 +19,8 @@ void usage(char* program);
 cell_t* cells;
 // Constraints array
 constraint_t* constraints;
+// Number of nodes visited
+long long nodeCount;
 
 int main(int argc, char **argv) {
   struct timeval startTime, endTime;
@@ -32,6 +34,7 @@ int main(int argc, char **argv) {
   gettimeofday(&startTime, NULL);
 
   initialize(argv[1], &cells, &constraints);
+  nodeCount = 0;
 
   //Record start of Computation time
   gettimeofday(&compStartTime, NULL);
@@ -42,6 +45,7 @@ int main(int argc, char **argv) {
 
   gettimeofday(&endTime, NULL);
   printSolution(cells);
+  printf("Nodes Visited: %lld\n", nodeCount);
 
   compTime = TIME_DIFF(endTime, compStartTime);
   totalTime = TIME_DIFF(endTime, startTime);
@@ -62,6 +66,7 @@ int solve(int step) {
   if (step == totalNumCells)
     return 1;
 
+  nodeCount++;
   // Find the next cell to fill and test all possible values
   if ((cellIndex = getNextCellToFill(cells, constraints)) < 0)
     return 0;

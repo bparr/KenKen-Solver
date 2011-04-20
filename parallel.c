@@ -49,7 +49,8 @@ void runParallel(unsigned P);
 int getNextJob(int pid, job_t* myJob);
 void addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
                 job_queue_t* myJobQueue, assignment_t* assignments);
-int solve(int step, cell_t* myCells, constraint_t* myConstraints);
+int solve(int step, cell_t* myCells, constraint_t* myConstraints,
+          int* myNodeCount);
 void usage(char* program);
 
 
@@ -63,6 +64,8 @@ constraint_t* constraints;
 job_queue_t* jobQueues;
 // Flag to mark if a solution is found by a processor
 volatile int found; // TODO remove volatile?
+// Number of nodes visited
+long long nodeCount;
 // Program execution timinges (in milliseconds)
 double totalTime, compTime;
 
@@ -79,6 +82,7 @@ int main(int argc, char **argv) {
   // Initialize global variables and data-structures.
   P = atoi(argv[1]);
   initialize(argv[2], &cells, &constraints);
+  nodeCount = 0;
   found = 0;
 
   jobQueues = (job_queue_t*)calloc(sizeof(job_queue_t), P);
@@ -100,7 +104,8 @@ int main(int argc, char **argv) {
   gettimeofday(&endTime, NULL);
   totalTime = TIME_DIFF(endTime, startTime);
 
-  // Print out calculated times
+  // Print out number of nodes visited and calculated times
+  printf("Nodes Visited: %lld\n", nodeCount);
   printf("Computation Time = %.3f millisecs\n", compTime);
   printf("      Total Time = %.3f millisecs\n", totalTime);
 
@@ -109,7 +114,7 @@ int main(int argc, char **argv) {
 
 // Sets up and runs the parallel kenken solver
 void runParallel(unsigned P) {
-  int i, pid;
+  int i, pid, myNodeCount;
   job_t* myJob;
   cell_t* myCells;
   constraint_t* myConstraints;
@@ -119,9 +124,11 @@ void runParallel(unsigned P) {
   omp_set_num_threads(P);
 
   // Run algorithm
-#pragma omp parallel default(shared) private(i,pid,myConstraints,myCells,myJob)
+#pragma omp parallel default(shared) private(i, pid, myNodeCount, myJob, \
+                                             myCells, myConstraints)
 {
   pid = omp_get_thread_num();
+  myNodeCount = 0;
 
   // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
@@ -148,12 +155,17 @@ void runParallel(unsigned P) {
       applyValue(myCells, myConstraints, myJob->assignments[i].cellIndex,
                  myJob->assignments[i].value);
 
-    if (ADD_TO_QUEUE(&(jobQueues[pid]), myJob))
+    if (ADD_TO_QUEUE(&(jobQueues[pid]), myJob)) {
+      myNodeCount++;
       addToQueue(myJob->length, myCells, myConstraints, &(jobQueues[pid]),
                  myJob->assignments);
+    }
     else
-      solve(myJob->length, myCells, myConstraints);
+      solve(myJob->length, myCells, myConstraints, &myNodeCount);
   }
+
+  #pragma omp critical
+    nodeCount += myNodeCount;
 }
 
   // Calculate computation time
@@ -213,7 +225,8 @@ void addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
 }
 
 // Main recursive function used to solve the program
-int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
+int solve(int step, cell_t* myCells, constraint_t* myConstraints,
+          int* myNodeCount) {
   int cellIndex;
   int value = UNASSIGNED_VALUE;
 
@@ -234,13 +247,14 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
     return 1;
   }
 
+  (*myNodeCount)++;
   // Find the next cell to fill and test all possible values
   if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
     return 0;
 
   while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
                                                      cellIndex, value))) {
-    if (solve(step + 1, myCells, myConstraints))
+    if (solve(step + 1, myCells, myConstraints, myNodeCount))
       return 1;
   }
 
