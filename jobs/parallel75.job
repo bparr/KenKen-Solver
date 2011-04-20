@@ -1,0 +1,25 @@
+#!/bin/csh
+#PBS -l ncpus=32
+#ncpus must be a multiple of 16
+#PBS -l walltime=30:00
+#PBS -j oe
+#PBS -q batch
+
+set echo
+
+ja
+
+#move to my $SCRATCH directory
+cd $SCRATCH
+
+#copy executable to $SCRATCH
+cp $HOME/kenken/parallel parallel75
+cp $HOME/kenken/input/75minutes.txt p75minutes.txt
+
+
+#run my executable
+setenv OMP_NUM_THREADS $PBS_NCPUS
+omplace -nt $OMP_NUM_THREADS ./parallel75 32 p75minutes.txt
+
+ja -chlst
+
