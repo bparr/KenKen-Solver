@@ -1,0 +1,66 @@
+Warning: no access to tty (Bad file descriptor).
+Thus no job control in this shell.
+module: Command not found.
+module: Command not found.
+ja
+cd /bessemer/jjp1
+cp /usr/users/7/jjp1/kenken/serial serial27
+cp /usr/users/7/jjp1/kenken/input/27minutes.txt 27minutes.txt
+./serial27 27minutes.txt
+4 8 5 6 11 2 1 10 7 9 3
+8 3 7 1 10 9 2 6 4 11 5
+2 9 6 8 7 11 3 4 1 5 10
+9 5 1 3 4 10 8 7 2 6 11
+1 2 10 4 5 3 11 8 6 7 9
+5 7 2 11 8 6 10 3 9 4 1
+7 4 9 10 3 1 6 11 5 8 2
+3 11 4 2 6 5 9 1 8 10 7
+6 10 3 5 2 4 7 9 11 1 8
+11 6 8 9 1 7 5 2 10 3 4
+10 1 11 7 9 8 4 5 3 2 6
+Computation Time = 1324865.917 millisecs
+      Total Time = 1324867.729 millisecs
+1324.868u 0.020s 22:04.89 99.9%	0+0k 0+0io 0pf+0w
+ja -chlst
+
+
+Job Accounting - Command Report
+===============================
+
+    Command       Started    Elapsed    User CPU    Sys CPU       CPU      Block I/O    Swap In      CPU MEM        Characters           Logical I/O      CoreMem   VirtMem   Ex
+     Name           At       Seconds    Seconds     Seconds    Delay Secs  Delay Secs  Delay Secs  Avg Mbytes     Read     Written     Read      Write    HiValue   HiValue   St   Ni  Fl   SBU's 
+===============  ========  ==========  ==========  ==========  ==========  ==========  ==========  ==========  =========  =========  ========  ========  ========  ========  ===  ===  ==  =======
+# CFG   ON(    1) (    7)  01:12:14 04/19/2011  System:  Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
+ja               01:12:14        0.05        0.00        0.00        0.00        0.02        0.00        3.48      0.018      0.000        18         4      2112      5872    0    0         0.00
+cp               01:12:14        0.04        0.00        0.00        0.00        0.00        0.00        4.05      0.053      0.047        12         2      1712      6576    0    0         0.00
+cp               01:12:14        0.05        0.00        0.01        0.00        0.00        0.00        4.87      0.007      0.001        12         2      1680      6576    0    0         0.00
+serial27         01:12:15     1324.89     1324.87        0.02        0.00        0.00        0.00        0.00      0.048      0.000        56         2      2800     10912    0    0         0.00
+
+
+Job CSA Accounting - Summary Report
+====================================
+
+Job Accounting File Name         : /tmp/.jacct2c148
+Operating System                 : Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
+User Name (ID)                   : jjp1 (45457)
+Group Name (ID)                  : ac3bdhp (13825)
+Project Name (ID)                : ? (0)
+Job ID                           : 0x2c148
+Report Starts                    : 04/19/11 01:12:14
+Report Ends                      : 04/19/11 01:34:19
+Elapsed Time                     :         1325      Seconds
+User CPU Time                    :         1324.8760 Seconds
+System CPU Time                  :            0.0360 Seconds
+CPU Time Core Memory Integral    :            0.0571 Mbyte-seconds
+CPU Time Virtual Memory Integral :            0.2428 Mbyte-seconds
+Maximum Core Memory Used         :            2.7344 Mbytes
+Maximum Virtual Memory Used      :           10.6562 Mbytes
+Characters Read                  :            0.1251 Mbytes
+Characters Written               :            0.0485 Mbytes
+Logical I/O Read Requests        :           98
+Logical I/O Write Requests       :           10
+CPU Delay                        :            0.0040 Seconds
+Block I/O Delay                  :            0.0233 Seconds
+Swap In Delay                    :            0.0000 Seconds
+Number of Commands               :            4
+System Billing Units             :            0.0000
