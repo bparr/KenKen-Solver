@@ -1,0 +1,62 @@
+module: Command not found.
+ja
+cd /bessemer/jjp1
+cp /usr/users/7/jjp1/kenken/serial serial75
+cp /usr/users/7/jjp1/kenken/input/75minutes.txt 75minutes.txt
+./serial75 75minutes.txt
+4 3 7 5 6 1 8 9 10 2
+10 9 3 8 5 6 4 2 1 7
+7 10 5 9 3 4 2 1 8 6
+2 7 6 3 4 8 9 10 5 1
+6 5 10 7 2 3 1 8 9 4
+3 1 8 10 9 2 7 6 4 5
+9 2 1 4 8 5 3 7 6 10
+1 6 4 2 7 9 10 5 3 8
+5 8 9 1 10 7 6 4 2 3
+8 4 2 6 1 10 5 3 7 9
+Computation Time = 3898069.325 millisecs
+      Total Time = 3898072.273 millisecs
+3897.787u 1.112s 1:04:58.88 100.0%	0+0k 0+8io 0pf+0w
+ja -chlst
+
+
+Job Accounting - Command Report
+===============================
+
+    Command       Started    Elapsed    User CPU    Sys CPU       CPU      Block I/O    Swap In      CPU MEM        Characters           Logical I/O      CoreMem   VirtMem   Ex
+     Name           At       Seconds    Seconds     Seconds    Delay Secs  Delay Secs  Delay Secs  Avg Mbytes     Read     Written     Read      Write    HiValue   HiValue   St   Ni  Fl   SBU's 
+===============  ========  ==========  ==========  ==========  ==========  ==========  ==========  ==========  =========  =========  ========  ========  ========  ========  ===  ===  ==  =======
+# CFG   ON(    1) (    7)  07:03:15 04/19/2011  System:  Linux bl1.psc.teragrid.org 2.6.32.29-0.3.1.2687.3.PTF-default #1 SMP 2011-02-25 13:36:59 +0100 x86_64
+ja               07:03:15        0.01        0.00        0.00        0.00        0.00        0.00       15.84      0.019      0.000        19         4      1056     23772    0    0         0.00
+cp               07:03:15        0.06        0.00        0.01        0.00        0.00        0.00       13.43      0.066      0.057        18         2       928     15820    0    0         0.00
+cp               07:03:15        0.07        0.00        0.00        0.00        0.00        0.00       12.60      0.011      0.001        18         2       880     15820    0    0         0.00
+serial75         07:03:16     3898.89     3897.74        1.11        0.23        0.00        0.00       29.03      0.293      0.000        80         2      8264     23556    0    0         0.00
+
+
+Job CSA Accounting - Summary Report
+====================================
+
+Job Accounting File Name         : /tmp/.jacct84e6
+Operating System                 : Linux bl1.psc.teragrid.org 2.6.32.29-0.3.1.2687.3.PTF-default #1 SMP 2011-02-25 13:36:59 +0100 x86_64
+User Name (ID)                   : jjp1 (45457)
+Group Name (ID)                  : ac3bdhp (13825)
+Project Name (ID)                : ? (0)
+Job ID                           : 0x84e6
+Report Starts                    : 04/19/11 07:03:15
+Report Ends                      : 04/19/11 08:08:14
+Elapsed Time                     :         3899      Seconds
+User CPU Time                    :         3897.7440 Seconds
+System CPU Time                  :            1.1280 Seconds
+CPU Time Core Memory Integral    :        31291.6503 Mbyte-seconds
+CPU Time Virtual Memory Integral :        81885.7239 Mbyte-seconds
+Maximum Core Memory Used         :            8.0703 Mbytes
+Maximum Virtual Memory Used      :           23.2148 Mbytes
+Characters Read                  :            0.3890 Mbytes
+Characters Written               :            0.0580 Mbytes
+Logical I/O Read Requests        :          135
+Logical I/O Write Requests       :           10
+CPU Delay                        :            0.2300 Seconds
+Block I/O Delay                  :            0.0000 Seconds
+Swap In Delay                    :            0.0000 Seconds
+Number of Commands               :            4
+System Billing Units             :            0.0000
