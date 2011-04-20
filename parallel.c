@@ -6,87 +6,123 @@
  */
 
 #include "kenken.h"
+#include <sys/time.h>
 #include <omp.h>
 
+// Length of processor job queue
+#define QUEUE_LENGTH 20 // TODO use better value?
 // Increment in the job array
-#define INCREMENT(i) (((i) + 1) % (maxJobs))
-// Index into jobs array
-#define GET_JOB(i) ((i)*(jobLength))
+#define INCREMENT(i) (((i) + 1) % (QUEUE_LENGTH))
+// Number of available slots in queue
+#define AVAILABLE(q) ((QUEUE_LENGTH - 1 - ((QUEUE_LENGTH + (q)->tail - \
+                      (q)->head) % QUEUE_LENGTH)))
+// Maximum length of a job that can be added to a queue
+#define MAX_JOB_LENGTH (5 * N)
+// Whether or not a job should be added to a queue
+#define ADD_TO_QUEUE(q, j) ((j)->length < MAX_JOB_LENGTH && AVAILABLE(q) >= N)
 
-typedef struct job {
+// Calculate number of milliseconds between two timevals
+#define TIME_DIFF(b, a) (((b).tv_sec - (a).tv_sec) * 1000.0 + \
+                         ((b).tv_usec - (a).tv_usec) / 1000.0)
+
+typedef struct assignment {
   int cellIndex;
   int value;
+} assignment_t;
+
+typedef struct job {
+  int length;
+  assignment_t assignments[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
 } job_t;
+
+// Job queue implemented as a circular array. Jobs are popped from head, and
+// pushed to tail.
+typedef struct job_queue {
+  job_t queue[QUEUE_LENGTH];
+  volatile int head; // TODO remove volatile?
+  volatile int tail; // TODO remove volatile?
+  omp_lock_t headLock;
+} job_queue_t;
 
 // Algorithm functions
 void runParallel(unsigned P);
-int getNextJob(job_t* myJob);
-int fillJobs(int step, job_t* myJob, cell_t* myCells,
-             constraint_t* myConstraints);
+int getNextJob(int pid, job_t* myJob);
+void addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
+                job_queue_t* myJobQueue, assignment_t* assignments);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints);
 void usage(char* program);
 
 
+// Number of processors
+unsigned P;
 // Problem grid
 cell_t* cells;
 // Constraints array
 constraint_t* constraints;
-// Max number of jobs
-int maxJobs;
-// Number of cells set per job
-int jobLength;
-// Job queue
-job_t* jobs;
-// Index to the head of the queue
-volatile int queueHead;
-// Index to the tail of the queue
-volatile int queueTail;
+// Array of job queues, so each processor owns a queue
+job_queue_t* jobQueues;
 // Flag to mark if a solution is found by a processor
-volatile int found;
+volatile int found; // TODO remove volatile?
+// Program execution timinges (in milliseconds)
+double totalTime, compTime;
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
+  int i;
+  struct timeval startTime, endTime;
+
   if (argc != 3)
     usage(argv[0]);
 
+  // Record start of total time
+  gettimeofday(&startTime, NULL);
+
   // Initialize global variables and data-structures.
+  P = atoi(argv[1]);
   initialize(argv[2], &cells, &constraints);
-
-  // Initialize job queue (implemented as a circular array)
-  // Always keeps one block in the array empty. This is necessary because of
-  // the concurrent access. Readers modify end, writer modifies start.
-  // Inherently thread-safe as long as reader's access is controlled.
-  jobLength = N;
-  maxJobs = N * N;
-
-  jobs = (job_t*)calloc(sizeof(job_t), jobLength * maxJobs);
-  if (!jobs)
-    unixError("Failed to allocated memory for the job queue");
-
-  queueHead = 0;
-  queueTail = 0;
   found = 0;
 
-  runParallel(atoi(argv[1]));
+  jobQueues = (job_queue_t*)calloc(sizeof(job_queue_t), P);
+  if (!jobQueues)
+    unixError("Failed to allocated memory for the job queues");
+
+  for (i = 0; i < P; i++)
+    omp_init_lock(&(jobQueues[i].headLock));
+
+  // Add initial job (nothing assigned) to root processor
+  jobQueues[0].tail = 1;
+
+
+  runParallel(P);
   if (!found)
     appError("No solution found");
+
+  // Use final time to calculate total time
+  gettimeofday(&endTime, NULL);
+  totalTime = TIME_DIFF(endTime, startTime);
+
+  // Print out calculated times
+  printf("Computation Time = %.3f millisecs\n", compTime);
+  printf("      Total Time = %.3f millisecs\n", totalTime);
 
   return 0;
 }
 
 // Sets up and runs the parallel kenken solver
 void runParallel(unsigned P) {
-  int i;
+  int i, pid;
   job_t* myJob;
   cell_t* myCells;
   constraint_t* myConstraints;
+  struct timeval startCompTime, endCompTime;
 
   // Begin parallel
   omp_set_num_threads(P);
 
   // Run algorithm
-#pragma omp parallel default(shared) private(i, myConstraints, myCells, myJob)
+#pragma omp parallel default(shared) private(i,pid,myConstraints,myCells,myJob)
 {
+  pid = omp_get_thread_num();
+
   // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
   if (!myConstraints)
@@ -96,98 +132,84 @@ void runParallel(unsigned P) {
   if (!myCells)
     unixError("Failed to allocate memory for myCells");
 
-  myJob = (job_t*)calloc(sizeof(job_t), jobLength);
+  myJob = (job_t*)malloc(sizeof(job_t));
   if (!myJob)
     unixError("Failed to allocate memory for myJob");
 
-
-  // Begin finding jobs and running algorithm
-  // After filling jobs, thread should go and help compute remaining jobs
-  #pragma omp master
-  {
-    memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
-    memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
-    fillJobs(0, myJob, myCells, myConstraints);
-  }
+  #pragma omp single
+    gettimeofday(&startCompTime, NULL);
 
   // Get and complete new job until none left, or solution found
-  while (getNextJob(myJob)) {
+  while (getNextJob(pid, myJob)) {
     memcpy(myConstraints, constraints, numConstraints * sizeof(constraint_t));
     memcpy(myCells, cells, totalNumCells * sizeof(cell_t));
 
-    for (i = 0; i < jobLength; i++)
-      applyValue(myCells, myConstraints, myJob[i].cellIndex, myJob[i].value);
+    for (i = 0; i < myJob->length; i++)
+      applyValue(myCells, myConstraints, myJob->assignments[i].cellIndex,
+                 myJob->assignments[i].value);
 
-    solve(jobLength, myCells, myConstraints);
+    if (ADD_TO_QUEUE(&(jobQueues[pid]), myJob))
+      addToQueue(myJob->length, myCells, myConstraints, &(jobQueues[pid]),
+                 myJob->assignments);
+    else
+      solve(myJob->length, myCells, myConstraints);
   }
 }
+
+  // Calculate computation time
+  gettimeofday(&endCompTime, NULL);
+  compTime = TIME_DIFF(endCompTime, startCompTime);
 }
 
 // Retrieves the next job from the job array. Will block until a job is
 // available
-int getNextJob(job_t* myJob) {
-  int gotJob = 0;
-  while (!gotJob) {
-    // Block until job becomes available
-    while (!found && (queueHead == queueTail));
+// TODO don't loop forever when no solution found (important?)
+int getNextJob(int pid, job_t* myJob) {
+  int i;
+  job_t* nextJob;
 
-    if (found)
-      return 0;
+  for (i = pid; !found; i = (i + 1) % P) {
+    if (jobQueues[i].head == jobQueues[i].tail)
+      continue;
 
-    // Only one processor should actually get the job
-    #pragma omp critical
-    {
-      if (queueHead != queueTail && !found) {
-        // Copy over job
-        memcpy(myJob, &jobs[GET_JOB(queueHead)], sizeof(job_t) * jobLength);
-        queueHead = INCREMENT(queueHead);
+    omp_set_lock(&(jobQueues[i].headLock));
+    if (jobQueues[i].head != jobQueues[i].tail && !found) {
+      nextJob = &(jobQueues[i].queue[jobQueues[i].head]);
+      myJob->length = nextJob->length;
+      memcpy(myJob->assignments, nextJob->assignments,
+             sizeof(assignment_t) * nextJob->length);
 
-        // Successfully retrieved job
-        gotJob = 1;
-      }
+      jobQueues[i].head = INCREMENT(jobQueues[i].head);
+      omp_unset_lock(&(jobQueues[i].headLock));
+      return 1;
     }
-  }
 
-  return 1;
-}
-
-// Fills the job array. Returns 1 to end the filling, 0 to continue
-int fillJobs(int step, job_t* myJob, cell_t* myCells,
-             constraint_t* myConstraints) {
-  int cellIndex;
-  int value = UNASSIGNED_VALUE;
-
-  if (found)
-    return 1;
-
-  if (step == jobLength) {
-    // Loop while buffer is full and no solution is found
-    while (!found && INCREMENT(queueTail) == queueHead);
-
-    // If we exited while because solution was found, exit
-    if (found)
-      return 1;
-
-    // Spot in the buffer freed up so set value as current job
-    memcpy(&jobs[GET_JOB(queueTail)], myJob, sizeof(job_t) * jobLength);
-    queueTail = INCREMENT(queueTail);
-    return 0;
-  }
-
-  // Find the next cell to fill and test all possible values
-  if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
-    return 0;
-
-  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
-                                                     cellIndex, value))) {
-    myJob[step].cellIndex = cellIndex;
-    myJob[step].value = value;
-
-    if (fillJobs(step + 1, myJob, myCells, myConstraints))
-      return 1;
+    omp_unset_lock(&(jobQueues[i].headLock));
   }
 
   return 0;
+}
+
+// Given a job, iterate a step and add each possible value as a new job
+void addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
+               job_queue_t* myJobQueue, assignment_t* assignments) {
+  int cellIndex;
+  int value = UNASSIGNED_VALUE;
+  job_t* job;
+
+  if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
+    return;
+
+  assignments[step].cellIndex = cellIndex;
+  while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
+                                                     cellIndex, value))) {
+    assignments[step].value = value;
+    job = &(myJobQueue->queue[myJobQueue->tail]);
+    memcpy(&(job->assignments), assignments, (step + 1) * sizeof(assignment_t));
+    job->length = step + 1;
+
+    myJobQueue->tail = INCREMENT(myJobQueue->tail);
+  }
 }
 
 // Main recursive function used to solve the program
@@ -195,6 +217,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
   int cellIndex;
   int value = UNASSIGNED_VALUE;
 
+  // TODO remove?
   if (found)
     return 1;
 
@@ -223,6 +246,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints) {
 
   return 0;
 }
+
 
 // Print usage information and exit
 void usage(char* program) {
