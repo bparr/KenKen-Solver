@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 // Maximum problem size supported by program
-#define MAX_PROBLEM_SIZE 25
+#define MAX_PROBLEM_SIZE 15
 // Value used to indicate a cell's value is unassigned
 #define UNASSIGNED_VALUE 0
 // Number of constraints a cell has (1 row constraint, 1 column constraint,
