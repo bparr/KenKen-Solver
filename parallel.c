@@ -222,18 +222,24 @@ int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
   else if (cellIndex == TOO_MANY_POSSIBLES)
     return -1;
 
+  // Preemptively assign each possible a spot in the queue, so there is always
+  // at least room in queue to add the job itself
   availableSpots -= getNumPossibles(cells, cellIndex);
+
   assignments[step].cellIndex = cellIndex;
   while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
                                                      cellIndex, value))) {
     assignments[step].value = value;
     spotsUsed = addToQueue(step + 1, myCells, myConstraints, myJobQueue,
                            assignments, availableSpots + 1);
+
+    // Able to add split up job to queue, so just update available spot count
     if (spotsUsed >= 0) {
       availableSpots -= (spotsUsed - 1);
       continue;
     }
 
+    // Add job to queue since failed to add split up job to queue
     job = &(myJobQueue->queue[myJobQueue->tail]);
     memcpy(&(job->assignments), assignments, (step + 1) * sizeof(assignment_t));
     job->length = step + 1;
@@ -241,6 +247,8 @@ int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
     myJobQueue->tail = INCREMENT(myJobQueue->tail);
   }
 
+  // Return the number of spots in the queue that were used
+  // Note: this value is always in range of [0, originalAvailalbeSpots]
   return (originalAvailableSpots - availableSpots);
 }
 
