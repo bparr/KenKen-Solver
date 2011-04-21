@@ -16,9 +16,9 @@ cp /usr/users/0/bparr/kenken/input/27minutes.txt 27minutes.txt
 11 6 8 9 1 7 5 2 10 3 4
 10 1 11 7 9 8 4 5 3 2 6
 Nodes Visited: 1645316187
-Computation Time = 1311997.270 millisecs
-      Total Time = 1312120.992 millisecs
-1307.045u 4.856s 21:52.89 99.9%	0+0k 0+8io 0pf+0w
+Computation Time = 1249309.172 millisecs
+      Total Time = 1249373.081 millisecs
+1249.050u 0.988s 20:50.21 99.9%	0+0k 0+8io 1pf+0w
 ja -chlst
 
 
@@ -28,37 +28,37 @@ Job Accounting - Command Report
     Command       Started    Elapsed    User CPU    Sys CPU       CPU      Block I/O    Swap In      CPU MEM        Characters           Logical I/O      CoreMem   VirtMem   Ex
      Name           At       Seconds    Seconds     Seconds    Delay Secs  Delay Secs  Delay Secs  Avg Mbytes     Read     Written     Read      Write    HiValue   HiValue   St   Ni  Fl   SBU's 
 ===============  ========  ==========  ==========  ==========  ==========  ==========  ==========  ==========  =========  =========  ========  ========  ========  ========  ===  ===  ==  =======
-# CFG   ON(    1) (    7)  15:41:29 04/20/2011  System:  Linux bl1.psc.teragrid.org 2.6.32.29-0.3.1.2687.3.PTF-default #1 SMP 2011-02-25 13:36:59 +0100 x86_64
-ja               15:41:29        0.00        0.00        0.00        0.00        0.00        0.00       23.58      0.019      0.000        19         4      1060     23772    0    0         0.00
-cp               15:41:29        0.32        0.00        0.06        0.00        0.00        0.00       13.64      0.070      0.061        18         2       936     15820    0    0         0.00
-cp               15:41:29        0.21        0.00        0.00        0.00        0.01        0.00       12.60      0.011      0.001        18         2       876     15820    0    0         0.00
-serial27         15:41:30     1312.89     1306.89        4.85        0.95        0.00        0.00       28.64      0.301      0.000        82         2      8136     23292    0    0         0.00
+# CFG   ON(    1) (    7)  00:45:37 04/21/2011  System:  Linux bl0.psc.teragrid.org 2.6.32.29-0.3.1.2687.3.PTF-default #1 SMP 2011-02-25 13:36:59 +0100 x86_64
+ja               00:45:37        0.01        0.00        0.00        0.00        0.00        0.00       21.52      0.019      0.000        19         4      1060     23756    0    0         0.00
+cp               00:45:37        0.14        0.00        0.04        0.00        0.00        0.00       13.34      0.070      0.061        18         2       928     15816    0    0         0.00
+cp               00:45:37        0.10        0.00        0.01        0.00        0.00        0.00        0.00      0.011      0.001        18         2       872     15816    0    0         0.00
+serial27         00:45:38     1250.20     1249.00        0.98        0.07        0.03        0.00       28.62      0.290      0.000        79         2      8128     23292    0    0         0.00
 
 
 Job CSA Accounting - Summary Report
 ====================================
 
-Job Accounting File Name         : /tmp/.jacct8804
-Operating System                 : Linux bl1.psc.teragrid.org 2.6.32.29-0.3.1.2687.3.PTF-default #1 SMP 2011-02-25 13:36:59 +0100 x86_64
+Job Accounting File Name         : /tmp/.jacct8861
+Operating System                 : Linux bl0.psc.teragrid.org 2.6.32.29-0.3.1.2687.3.PTF-default #1 SMP 2011-02-25 13:36:59 +0100 x86_64
 User Name (ID)                   : bparr (45460)
 Group Name (ID)                  : ac3bdhp (13825)
 Project Name (ID)                : ? (0)
-Job ID                           : 0x8804
-Report Starts                    : 04/20/11 15:41:29
-Report Ends                      : 04/20/11 16:03:22
-Elapsed Time                     :         1313      Seconds
-User CPU Time                    :         1306.8960 Seconds
-System CPU Time                  :            4.9160 Seconds
-CPU Time Core Memory Integral    :        10360.6418 Mbyte-seconds
-CPU Time Virtual Memory Integral :        27209.4307 Mbyte-seconds
-Maximum Core Memory Used         :            7.9453 Mbytes
-Maximum Virtual Memory Used      :           23.2148 Mbytes
-Characters Read                  :            0.4013 Mbytes
-Characters Written               :            0.0623 Mbytes
-Logical I/O Read Requests        :          137
+Job ID                           : 0x8861
+Report Starts                    : 04/21/11 00:45:37
+Report Ends                      : 04/21/11 01:06:28
+Elapsed Time                     :         1251      Seconds
+User CPU Time                    :         1249.0000 Seconds
+System CPU Time                  :            1.0290 Seconds
+CPU Time Core Memory Integral    :         9853.0946 Mbyte-seconds
+CPU Time Virtual Memory Integral :        25927.8097 Mbyte-seconds
+Maximum Core Memory Used         :            7.9375 Mbytes
+Maximum Virtual Memory Used      :           23.1992 Mbytes
+Characters Read                  :            0.3898 Mbytes
+Characters Written               :            0.0624 Mbytes
+Logical I/O Read Requests        :          134
 Logical I/O Write Requests       :           10
-CPU Delay                        :            0.9557 Seconds
-Block I/O Delay                  :            0.0109 Seconds
+CPU Delay                        :            0.0735 Seconds
+Block I/O Delay                  :            0.0289 Seconds
 Swap In Delay                    :            0.0000 Seconds
 Number of Commands               :            4
 System Billing Units             :            0.0000
