@@ -3,9 +3,9 @@ Thus no job control in this shell.
 module: Command not found.
 module: Command not found.
 ja
-cd /bessemer/jjp1
-cp /usr/users/7/jjp1/kenken/serial serial35
-cp /usr/users/7/jjp1/kenken/input/35minutes.txt 35minutes.txt
+cd /bessemer/bparr
+cp /usr/users/0/bparr/kenken/serial serial35
+cp /usr/users/0/bparr/kenken/input/35minutes.txt 35minutes.txt
 ./serial35 35minutes.txt
 12 5 10 1 4 3 2 11 6 9 7 8
 5 7 3 12 9 4 8 2 11 10 1 6
@@ -19,9 +19,10 @@ cp /usr/users/7/jjp1/kenken/input/35minutes.txt 35minutes.txt
 1 12 9 7 3 10 11 6 8 4 5 2
 6 11 5 8 1 7 9 4 3 12 2 10
 10 3 6 9 2 11 1 7 5 8 4 12
-Computation Time = 1681917.238 millisecs
-      Total Time = 1681918.819 millisecs
-1681.656u 0.020s 28:01.94 99.9%	0+0k 0+0io 1pf+0w
+Nodes Visited: 1893184816
+Computation Time = 1644766.082 millisecs
+      Total Time = 1644767.562 millisecs
+1640.260u 0.024s 27:24.88 99.7%	0+0k 0+0io 19pf+0w
 ja -chlst
 
 
@@ -31,37 +32,37 @@ Job Accounting - Command Report
     Command       Started    Elapsed    User CPU    Sys CPU       CPU      Block I/O    Swap In      CPU MEM        Characters           Logical I/O      CoreMem   VirtMem   Ex
      Name           At       Seconds    Seconds     Seconds    Delay Secs  Delay Secs  Delay Secs  Avg Mbytes     Read     Written     Read      Write    HiValue   HiValue   St   Ni  Fl   SBU's 
 ===============  ========  ==========  ==========  ==========  ==========  ==========  ==========  ==========  =========  =========  ========  ========  ========  ========  ===  ===  ==  =======
-# CFG   ON(    1) (    7)  02:15:16 04/19/2011  System:  Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
-ja               02:15:16        0.02        0.00        0.00        0.00        0.00        0.00        0.66      0.018      0.000        18         4      2112      5872    0    0         0.00
-cp               02:15:16        0.07        0.00        0.00        0.00        0.01        0.00        0.01      0.053      0.047        12         2      1712      6576    0    0         0.00
-cp               02:15:16        0.03        0.00        0.00        0.00        0.01        0.00        0.01      0.007      0.001        12         2      1680      6576    0    0         0.00
-serial35         02:15:17     1681.94     1681.66        0.02        0.03        0.04        0.00        0.00      0.048      0.000        56         2      2880     10992    0    0         0.00
+# CFG   ON(    1) (    7)  19:26:47 04/20/2011  System:  Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
+ja               19:26:47        0.01        0.00        0.00        0.00        0.00        0.00        0.00      0.018      0.000        18         4      2112      5872    0    0         0.00
+cp               19:26:47        0.01        0.00        0.00        0.00        0.00        0.00        6.33      0.053      0.047        12         2      1712      6576    0    0         0.00
+cp               19:26:47        0.03        0.00        0.01        0.00        0.01        0.00        7.36      0.007      0.001        12         2      1680      6576    0    0         0.00
+serial35         19:26:48     1644.79     1640.26        0.02        0.02        4.26        0.00        0.00      0.048      0.000        56         2      2624     10736    0    0         0.00
 
 
 Job CSA Accounting - Summary Report
 ====================================
 
-Job Accounting File Name         : /tmp/.jacct2c14a
+Job Accounting File Name         : /tmp/.jacct2c232
 Operating System                 : Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
-User Name (ID)                   : jjp1 (45457)
+User Name (ID)                   : bparr (45460)
 Group Name (ID)                  : ac3bdhp (13825)
 Project Name (ID)                : ? (0)
-Job ID                           : 0x2c14a
-Report Starts                    : 04/19/11 02:15:16
-Report Ends                      : 04/19/11 02:43:18
-Elapsed Time                     :         1682      Seconds
-User CPU Time                    :         1681.6600 Seconds
-System CPU Time                  :            0.0250 Seconds
-CPU Time Core Memory Integral    :            0.0477 Mbyte-seconds
-CPU Time Virtual Memory Integral :            0.1754 Mbyte-seconds
-Maximum Core Memory Used         :            2.8125 Mbytes
-Maximum Virtual Memory Used      :           10.7344 Mbytes
-Characters Read                  :            0.1255 Mbytes
+Job ID                           : 0x2c232
+Report Starts                    : 04/20/11 19:26:47
+Report Ends                      : 04/20/11 19:54:12
+Elapsed Time                     :         1645      Seconds
+User CPU Time                    :         1640.2640 Seconds
+System CPU Time                  :            0.0360 Seconds
+CPU Time Core Memory Integral    :            0.0688 Mbyte-seconds
+CPU Time Virtual Memory Integral :            0.2568 Mbyte-seconds
+Maximum Core Memory Used         :            2.5625 Mbytes
+Maximum Virtual Memory Used      :           10.4844 Mbytes
+Characters Read                  :            0.1257 Mbytes
 Characters Written               :            0.0488 Mbytes
 Logical I/O Read Requests        :           98
 Logical I/O Write Requests       :           10
-CPU Delay                        :            0.0320 Seconds
-Block I/O Delay                  :            0.0549 Seconds
+CPU Delay                        :            0.0200 Seconds
+Block I/O Delay                  :            4.2702 Seconds
 Swap In Delay                    :            0.0000 Seconds
 Number of Commands               :            4
 System Billing Units             :            0.0000
