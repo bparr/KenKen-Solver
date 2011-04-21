@@ -1,0 +1,60 @@
+Blacklight Serial 27
+Number nodes,Computational Times,Total Time
+1645316187,1249309.172,1249373.081
+Blacklight Parallel 27
+Number nodes,Computational Times,Total Time
+263327946,6850.687,7141.798
+Blacklight Serial 33
+Number nodes,Computational Times,Total Time
+2191194181,1672375.941,1672402.993
+Blacklight Parallel 33
+Number nodes,Computational Times,Total Time
+445985176,11351.536,11788.473
+Blacklight Serial 35
+Number nodes,Computational Times,Total Time
+1893184816,1681757.621,1681908.067
+Blacklight Parallel 35
+Number nodes,Computational Times,Total Time
+758398484,21759.408,22143.402
+Blacklight Serial 39
+Number nodes,Computational Times,Total Time
+1704055826,1915863.033,1916116.462
+Blacklight Parallel 39
+Number nodes,Computational Times,Total Time
+10323129953,364018.615,364258.412
+Blacklight Serial 75
+Number nodes,Computational Times,Total Time
+3933957486,3858675.509,3858848.715
+Blacklight Parallel 75
+Number nodes,Computational Times,Total Time
+3777792780,117618.073,117890.323
+Pople Serial 27
+Number nodes,Computational Times,Total Time
+1645316187,1303463.131,1303464.853
+Pople Parallel 27
+Number nodes,Computational Times,Total Time
+532328957,14902.867,14952.211
+Pople Serial 33
+Number nodes,Computational Times,Total Time
+2191194181,1931721.849,1931723.286
+Pople Parallel 33
+Number nodes,Computational Times,Total Time
+550647535,16524.149,16570.649
+Pople Serial 35
+Number nodes,Computational Times,Total Time
+1893184816,1632680.932,1632682.993
+Pople Parallel 35
+Number nodes,Computational Times,Total Time
+1459990162,42244.093,42289.743
+Pople Serial 39
+Number nodes,Computational Times,Total Time
+1704055826,2266860.751,2266862.754
+Pople Parallel 39
+Number nodes,Computational Times,Total Time
+7578548810,322815.075,322863.836
+Pople Serial 75
+Number nodes,Computational Times,Total Time
+3933957486,4813030.102,4813031.240
+Pople Parallel 75
+Number nodes,Computational Times,Total Time
+2690550568,108056.279,108107.442
