@@ -47,8 +47,9 @@ typedef struct job_queue {
 // Algorithm functions
 void runParallel(unsigned P);
 int getNextJob(int pid, job_t* myJob);
-void addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
-                job_queue_t* myJobQueue, assignment_t* assignments);
+int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
+               job_queue_t* myJobQueue, assignment_t* assignments,
+               int availableSpots);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints,
           int* myNodeCount);
 void usage(char* program);
@@ -158,7 +159,7 @@ void runParallel(unsigned P) {
     if (ADD_TO_QUEUE(&(jobQueues[pid]), myJob)) {
       myNodeCount++;
       addToQueue(myJob->length, myCells, myConstraints, &(jobQueues[pid]),
-                 myJob->assignments);
+                 myJob->assignments, AVAILABLE(&jobQueues[pid]));
     }
     else
       solve(myJob->length, myCells, myConstraints, &myNodeCount);
@@ -202,26 +203,45 @@ int getNextJob(int pid, job_t* myJob) {
   return 0;
 }
 
-// Given a job, iterate a step and add each possible value as a new job
-void addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
-               job_queue_t* myJobQueue, assignment_t* assignments) {
-  int cellIndex;
+// Split up a job into smaller jobs and and each part to the given queue.
+// Returns the number of spots used, or -1 if failed to split up job.
+int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
+               job_queue_t* myJobQueue, assignment_t* assignments,
+               int availableSpots) {
+  int cellIndex, spotsUsed;
   int value = UNASSIGNED_VALUE;
+  int originalAvailableSpots = availableSpots;
   job_t* job;
 
-  if ((cellIndex = getNextCellToFill(myCells, myConstraints)) < 0)
-    return;
+  if (step > MAX_JOB_LENGTH)
+    return -1;
 
+  cellIndex = getNextCellToFillN(myCells, myConstraints, availableSpots);
+  if (cellIndex == IMPOSSIBLE_STATE)
+    return 0;
+  else if (cellIndex == TOO_MANY_POSSIBLES)
+    return -1;
+
+  availableSpots -= getNumPossibles(cells, cellIndex);
   assignments[step].cellIndex = cellIndex;
   while (UNASSIGNED_VALUE != (value = applyNextValue(myCells, myConstraints,
                                                      cellIndex, value))) {
     assignments[step].value = value;
+    spotsUsed = addToQueue(step + 1, myCells, myConstraints, myJobQueue,
+                           assignments, availableSpots + 1);
+    if (spotsUsed >= 0) {
+      availableSpots -= (spotsUsed - 1);
+      continue;
+    }
+
     job = &(myJobQueue->queue[myJobQueue->tail]);
     memcpy(&(job->assignments), assignments, (step + 1) * sizeof(assignment_t));
     job->length = step + 1;
 
     myJobQueue->tail = INCREMENT(myJobQueue->tail);
   }
+
+  return (originalAvailableSpots - availableSpots);
 }
 
 // Main recursive function used to solve the program

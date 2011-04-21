@@ -196,6 +196,11 @@ void initialize(char* file, cell_t** cellsPtr, constraint_t** constraintsPtr) {
   *cellsPtr = cells;
 }
 
+// Get number of possibles for a specific cell
+inline int getNumPossibles(cell_t* cells, int cellIndex) {
+  return cells[cellIndex].numPossibles;
+}
+
 // Apply a value to a specific cell, updating its constraints
 inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
                        int value) {
@@ -216,6 +221,13 @@ inline void applyValue(cell_t* cells, constraint_t* constraints, int cellIndex,
 // Get the next cell to fill in, remove it from its constraints, and return its
 // index
 inline int getNextCellToFill(cell_t* cells, constraint_t* constraints) {
+  return getNextCellToFillN(cells, constraints, INT_MAX);
+}
+
+// Same as getNextCellToFill, except it imposes a max number of possibles
+// allowed for the chosen cell, returning TOO_MANY_POSSIBLES if broken.
+inline int getNextCellToFillN(cell_t* cells, constraint_t* constraints,
+                              int maxPossibles) {
   int i, numPossibles;
   int minIndex = -1, minPossibles = INT_MAX;
   cell_t* cell;
@@ -233,13 +245,16 @@ inline int getNextCellToFill(cell_t* cells, constraint_t* constraints) {
 
     // Fail early if found unassigned cell with no possibilities
     if (numPossibles == 0)
-      return -1;
+      return IMPOSSIBLE_STATE;
 
     if (numPossibles < minPossibles) {
       minIndex = i;
       minPossibles = numPossibles;
     }
   }
+
+  if (minPossibles > maxPossibles)
+    return TOO_MANY_POSSIBLES;
 
   // Remove cell from its constraints in preparation for updating
   cell = &(cells[minIndex]);

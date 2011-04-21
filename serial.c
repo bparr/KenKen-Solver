@@ -68,7 +68,7 @@ int solve(int step) {
 
   nodeCount++;
   // Find the next cell to fill and test all possible values
-  if ((cellIndex = getNextCellToFill(cells, constraints)) < 0)
+  if ((cellIndex = getNextCellToFill(cells, constraints)) == IMPOSSIBLE_STATE)
     return 0;
 
   while (UNASSIGNED_VALUE != (value = applyNextValue(cells, constraints,
