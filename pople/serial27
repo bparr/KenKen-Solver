@@ -19,9 +19,9 @@ cp /usr/users/0/bparr/kenken/input/27minutes.txt 27minutes.txt
 11 6 8 9 1 7 5 2 10 3 4
 10 1 11 7 9 8 4 5 3 2 6
 Nodes Visited: 1645316187
-Computation Time = 1305227.653 millisecs
-      Total Time = 1305228.981 millisecs
-1304.432u 0.020s 21:45.24 99.9%	0+0k 0+0io 4pf+0w
+Computation Time = 1303463.131 millisecs
+      Total Time = 1303464.853 millisecs
+1302.752u 0.020s 21:43.50 99.9%	0+0k 0+0io 23pf+0w
 ja -chlst
 
 
@@ -31,37 +31,37 @@ Job Accounting - Command Report
     Command       Started    Elapsed    User CPU    Sys CPU       CPU      Block I/O    Swap In      CPU MEM        Characters           Logical I/O      CoreMem   VirtMem   Ex
      Name           At       Seconds    Seconds     Seconds    Delay Secs  Delay Secs  Delay Secs  Avg Mbytes     Read     Written     Read      Write    HiValue   HiValue   St   Ni  Fl   SBU's 
 ===============  ========  ==========  ==========  ==========  ==========  ==========  ==========  ==========  =========  =========  ========  ========  ========  ========  ===  ===  ==  =======
-# CFG   ON(    1) (    7)  18:32:17 04/20/2011  System:  Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
-ja               18:32:17        0.01        0.00        0.00        0.00        0.00        0.00        3.48      0.018      0.000        18         4      2112      5872    0    0         0.00
-cp               18:32:17        0.01        0.00        0.00        0.00        0.00        0.00        0.00      0.053      0.047        12         2      1712      6576    0    0         0.00
-cp               18:32:17        0.01        0.00        0.00        0.00        0.00        0.00        0.01      0.007      0.001        12         2      1680      6576    0    0         0.00
-serial27         18:32:17     1305.25     1304.43        0.02        0.04        0.59        0.00        0.00      0.048      0.000        56         2      2608     10768    0    0         0.00
+# CFG   ON(    1) (    7)  01:10:08 04/21/2011  System:  Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
+ja               01:10:08        0.01        0.00        0.00        0.00        0.00        0.00        3.87      0.018      0.000        18         4      2112      5872    0    0         0.00
+cp               01:10:08        0.02        0.00        0.00        0.00        0.00        0.00        0.01      0.054      0.049        12         2      1728      6576    0    0         0.00
+cp               01:10:08        0.01        0.00        0.00        0.00        0.00        0.00        0.00      0.007      0.001        12         2      1680      6576    0    0         0.00
+serial27         01:10:08     1303.48     1302.75        0.02        0.01        0.62        0.00        0.00      0.048      0.000        56         2      2624     10768    0    0         0.00
 
 
 Job CSA Accounting - Summary Report
 ====================================
 
-Job Accounting File Name         : /tmp/.jacct2c230
+Job Accounting File Name         : /tmp/.jacct2c285
 Operating System                 : Linux pople4700.psc.teragrid.or 2.6.16.60-0.42.5-default #1 SMP Mon Aug 24 09:41:41 UTC 2009 ia64
 User Name (ID)                   : bparr (45460)
 Group Name (ID)                  : ac3bdhp (13825)
 Project Name (ID)                : ? (0)
-Job ID                           : 0x2c230
-Report Starts                    : 04/20/11 18:32:17
-Report Ends                      : 04/20/11 18:54:02
-Elapsed Time                     :         1305      Seconds
-User CPU Time                    :         1304.4360 Seconds
+Job ID                           : 0x2c285
+Report Starts                    : 04/21/11 01:10:08
+Report Ends                      : 04/21/11 01:31:51
+Elapsed Time                     :         1303      Seconds
+User CPU Time                    :         1302.7600 Seconds
 System CPU Time                  :            0.0245 Seconds
-CPU Time Core Memory Integral    :            0.0463 Mbyte-seconds
-CPU Time Virtual Memory Integral :            0.1804 Mbyte-seconds
-Maximum Core Memory Used         :            2.5469 Mbytes
+CPU Time Core Memory Integral    :            0.0440 Mbyte-seconds
+CPU Time Virtual Memory Integral :            0.1574 Mbyte-seconds
+Maximum Core Memory Used         :            2.5625 Mbytes
 Maximum Virtual Memory Used      :           10.5156 Mbytes
-Characters Read                  :            0.1252 Mbytes
-Characters Written               :            0.0485 Mbytes
+Characters Read                  :            0.1272 Mbytes
+Characters Written               :            0.0504 Mbytes
 Logical I/O Read Requests        :           98
 Logical I/O Write Requests       :           10
-CPU Delay                        :            0.0360 Seconds
-Block I/O Delay                  :            0.5867 Seconds
+CPU Delay                        :            0.0080 Seconds
+Block I/O Delay                  :            0.6205 Seconds
 Swap In Delay                    :            0.0000 Seconds
 Number of Commands               :            4
 System Billing Units             :            0.0000
