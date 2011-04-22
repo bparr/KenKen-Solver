@@ -10,7 +10,7 @@
 #include <omp.h>
 
 // Length of processor job queue
-#define QUEUE_LENGTH 20 // TODO use better value?
+#define QUEUE_LENGTH 20
 // Increment in the job array
 #define INCREMENT(i) (((i) + 1) % (QUEUE_LENGTH))
 // Number of available slots in queue
@@ -39,8 +39,8 @@ typedef struct job {
 // pushed to tail.
 typedef struct job_queue {
   job_t queue[QUEUE_LENGTH];
-  volatile int head; // TODO remove volatile?
-  volatile int tail; // TODO remove volatile?
+  volatile int head;
+  volatile int tail;
   omp_lock_t headLock;
 } job_queue_t;
 
@@ -64,7 +64,7 @@ constraint_t* constraints;
 // Array of job queues, so each processor owns a queue
 job_queue_t* jobQueues;
 // Flag to mark if a solution is found by a processor
-volatile int found; // TODO remove volatile?
+volatile int found;
 // Number of nodes visited
 long long nodeCount;
 // Program execution timinges (in milliseconds)
@@ -176,8 +176,9 @@ void runParallel(unsigned P) {
 }
 
 // Retrieves the next job from the job array. Will block until a job is
-// available
-// TODO don't loop forever when no solution found (important?)
+// available. Note, if the puzzle has no solution, then this will block forever.
+// Since only care about puzzles with solutions, this is fine (no need to add
+// logic for a case that will never happen by assumption).
 int getNextJob(int pid, job_t* myJob) {
   int i;
   job_t* nextJob;
@@ -259,7 +260,6 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints,
   int cellIndex;
   int value = UNASSIGNED_VALUE;
 
-  // TODO remove?
   if (found)
     return 1;
 
