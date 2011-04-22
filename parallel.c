@@ -51,7 +51,7 @@ int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
                job_queue_t* myJobQueue, assignment_t* assignments,
                int availableSpots);
 int solve(int step, cell_t* myCells, constraint_t* myConstraints,
-          int* myNodeCount);
+          long long* myNodeCount);
 void usage(char* program);
 
 
@@ -115,7 +115,8 @@ int main(int argc, char **argv) {
 
 // Sets up and runs the parallel kenken solver
 void runParallel(unsigned P) {
-  int i, pid, myNodeCount;
+  int i, pid;
+  long long myNodeCount;
   job_t* myJob;
   cell_t* myCells;
   constraint_t* myConstraints;
@@ -254,7 +255,7 @@ int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
 
 // Main recursive function used to solve the program
 int solve(int step, cell_t* myCells, constraint_t* myConstraints,
-          int* myNodeCount) {
+          long long* myNodeCount) {
   int cellIndex;
   int value = UNASSIGNED_VALUE;
 
