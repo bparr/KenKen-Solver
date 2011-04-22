@@ -7,44 +7,51 @@ nodeRegex = re.compile('Nodes Visited\: ([\d]+)\n')
 compRegex = re.compile('Computation Time = ([\d\.]+) millisecs\n')
 totalRegex = re.compile('      Total Time = ([\d\.]+) millisecs\n')
 
-def parseFile(filename):
-  node = None
-  compTime = None
-  totalTime = None
-
+def parseFile(filename, nodes, compTimes, totalTimes):
   f = open(filename, "r")
   for line in f.readlines():
     m = nodeRegex.match(line)
     if m:
-      node = m.group(1)
+      nodes.append(m.group(1))
       continue
 
     m = compRegex.match(line)
     if m:
-      compTime = m.group(1)
+      compTimes.append(m.group(1))
       continue
 
     m = totalRegex.match(line)
     if m:
-      totalTime = m.group(1)
+      totalTimes.append(m.group(1))
       continue
 
+def printData(nodes, compTimes, totalTimes):
+  print "Processors,Nodes,Computational Time,Total Time"
+  processors = [1,2,4,8,16,24,32]
 
-  print "Number nodes,Computational Times,Total Time"
-  print node + "," + compTime + "," + totalTime
+  for (processor,node,compTime,totalTime) in zip(processors, nodes, compTimes, totalTimes):
+    print str(processor) + "," + node + "," + compTime + "," + totalTime
+  print ""
 
-
-for file in files:
-  fileStr = str(file)
-  print "Blacklight Serial " + fileStr
-  parseFile("blacklight/serial" + fileStr)
-  print "Blacklight Parallel " + fileStr
-  parseFile("blacklight/parallel" + fileStr)
 
 for file in files:
+  nodes = []
+  compTimes = []
+  totalTimes = []
   fileStr = str(file)
-  print "Pople Serial " + fileStr
-  parseFile("pople/serial" + fileStr)
-  print "Pople Parallel " + fileStr
-  parseFile("pople/parallel" + fileStr)
+  parseFile("blacklight/serial" + fileStr, nodes, compTimes, totalTimes)
+  parseFile("blacklight/parallel" + fileStr, nodes, compTimes, totalTimes)
+  print "Blacklight " + fileStr
+  printData(nodes, compTimes, totalTimes)
+
+for file in files:
+  nodes = []
+  compTimes = []
+  totalTimes = []
+  fileStr = str(file)
+  parseFile("pople/serial" + fileStr, nodes, compTimes, totalTimes)
+  parseFile("pople/parallel" + fileStr, nodes, compTimes, totalTimes)
+  print "Pople " + fileStr
+  printData(nodes, compTimes, totalTimes)
+
 
