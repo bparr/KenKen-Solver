@@ -19,9 +19,9 @@ OMP warning: KMP_AFFINITY: parameter invalid, ignoring 'disabled'
 1 6 4 2 7 9 10 5 3 8
 5 8 9 1 10 7 6 4 2 3
 8 4 2 6 1 10 5 3 7 9
-Nodes Visited: -45466668
-Computation Time = 2676862.019 millisecs
-      Total Time = 2676892.969 millisecs
+Nodes Visited: 4249743954
+Computation Time = 2677139.589 millisecs
+      Total Time = 2677169.205 millisecs
 cp /usr/users/0/bparr/kenken/parallel parallel75
 cp /usr/users/0/bparr/kenken/input/75minutes.txt p75minutes.txt
 omplace -nt 32 ./parallel75 4 p75minutes.txt

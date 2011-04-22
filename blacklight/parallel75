@@ -15,9 +15,9 @@ omplace -nt 32 ./parallel75 2 p75minutes.txt
 1 6 4 2 7 9 10 5 3 8
 5 8 9 1 10 7 6 4 2 3
 8 4 2 6 1 10 5 3 7 9
-Nodes Visited: -3725601712
-Computation Time = 2362869.261 millisecs
-      Total Time = 2362872.489 millisecs
+Nodes Visited: 4233496898
+Computation Time = 2061209.263 millisecs
+      Total Time = 2061212.330 millisecs
 cp /usr/users/0/bparr/kenken/parallel parallel75
 cp /usr/users/0/bparr/kenken/input/75minutes.txt p75minutes.txt
 omplace -nt 32 ./parallel75 4 p75minutes.txt
