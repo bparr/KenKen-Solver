@@ -1,7 +1,12 @@
-/**	@file kenken.c
- *
- *	@author Jonathan Park (jjp1) and Ben Parr (bparr)
- */
+// ============================================================================
+// Jonathan Park (jjp1)
+// Ben Parr (bparr)
+//
+// File: kenken.c
+// Description: Serial implementation of a KenKen puzzle solver.
+//
+// CS418 Project
+// ============================================================================
 
 #include <stdio.h>
 #include <stdlib.h>

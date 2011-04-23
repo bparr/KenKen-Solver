@@ -1,9 +1,12 @@
-/** @file kenken.c
- *
- *  @brief Parallel implementation of a KenKen puzzle solver.
- *
- *  @author Jonathan Park (jjp1) and Ben Parr (bparr)
- */
+// ============================================================================
+// Jonathan Park (jjp1)
+// Ben Parr (bparr)
+//
+// File: kenken.c
+// Description: Parallel implementation of a KenKen puzzle solver.
+//
+// CS418 Project
+// ============================================================================
 
 #include "kenken.h"
 #include <sys/time.h>
@@ -129,10 +132,10 @@ void runParallel(unsigned P) {
 #pragma omp parallel default(shared) private(i, pid, myNodeCount, myJob, \
                                              myCells, myConstraints)
 {
+  // Initialize local variables and data-structures
   pid = omp_get_thread_num();
   myNodeCount = 0;
 
-  // Initialize our local copies of the data-structures
   myConstraints = (constraint_t*)calloc(sizeof(constraint_t), numConstraints);
   if (!myConstraints)
     unixError("Failed to allocate memory for myConstraints");
@@ -145,6 +148,7 @@ void runParallel(unsigned P) {
   if (!myJob)
     unixError("Failed to allocate memory for myJob");
 
+  // Record start of computation time
   #pragma omp single
     gettimeofday(&startCompTime, NULL);
 
@@ -159,6 +163,7 @@ void runParallel(unsigned P) {
 
     if (ADD_TO_QUEUE(&(jobQueues[pid]), myJob)) {
       myNodeCount++;
+      // Guarenteed to succeed given ADD_TO_QUEUE(...) returned true
       addToQueue(myJob->length, myCells, myConstraints, &(jobQueues[pid]),
                  myJob->assignments, AVAILABLE(&jobQueues[pid]));
     }
@@ -205,7 +210,7 @@ int getNextJob(int pid, job_t* myJob) {
   return 0;
 }
 
-// Split up a job into smaller jobs and and each part to the given queue.
+// Split up a job into smaller jobs and add each part to the given queue.
 // Returns the number of spots used, or -1 if failed to split up job.
 int addToQueue(int step, cell_t* myCells, constraint_t* myConstraints,
                job_queue_t* myJobQueue, assignment_t* assignments,
@@ -264,7 +269,7 @@ int solve(int step, cell_t* myCells, constraint_t* myConstraints,
     return 1;
 
   if (step == totalNumCells) {
-    // Critical section that prints cells if a solution is found
+    // Print out solution and set found to true
     #pragma omp critical
     {
       if (!found) {

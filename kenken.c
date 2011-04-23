@@ -1,7 +1,12 @@
-/**	@file kenken.c
- *
- *	@author Jonathan Park (jjp1) and Ben Parr (bparr)
- */
+// ============================================================================
+// Jonathan Park (jjp1)
+// Ben Parr (bparr)
+//
+// File: kenken.c
+// Description: General KenKen code used by both serial and parallel solvers.
+//
+// CS418 Project
+// ============================================================================
 
 #include "kenken.h"
 
@@ -75,6 +80,7 @@ inline void removeNode(celllist_t* cellList, int node);
 
 // Miscellaneous functions
 void readLine(FILE* in, char* lineBuf);
+
 
 // Given an input file name, initialize cells and constraints and global
 // variables. Note, this should only be called once at beginning of program.
@@ -641,18 +647,19 @@ inline void removeNode(celllist_t* cellList, int node) {
   --(cellList->size);
 }
 
-
+// Read line from file into lineBuf, exiting if the read failed
 void readLine(FILE* in, char* lineBuf) {
   if (!fgets(lineBuf, MAX_LINE_LEN, in))
     unixError("Failed to read line from input file");
 }
 
+// Print an application error, and exit
 void appError(const char* str) {
   fprintf(stderr, "%s\n", str);
   exit(1);
 }
 
-// Display a unix error and exit
+// Print a unix error, and exit
 void unixError(const char* str) {
   perror(str);
   exit(1);

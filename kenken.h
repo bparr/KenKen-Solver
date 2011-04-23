@@ -1,7 +1,13 @@
-/** @file kenken.h
- *
- *  @author Jonathan Park (jjp1) and Ben Parr (bparr)
- */
+// ============================================================================
+// Jonathan Park (jjp1)
+// Ben Parr (bparr)
+//
+// File: kenken.h
+// Description: Header file for general KenKen code used by both serial and
+//              parallel solvers.
+//
+// CS418 Project
+// ============================================================================
 
 #ifndef __KENKEN_H__
 #define __KENKEN_H__
@@ -25,6 +31,7 @@
 #define NUM_CELL_CONSTRAINTS 3
 
 
+// Type of constraints
 typedef enum {
   LINE,
   PLUS,
@@ -34,23 +41,27 @@ typedef enum {
   SINGLE
 } type_t;
 
+// A node in a cell list
 typedef struct cellnode {
   int previous;
   int next;
 } cellnode_t;
 
+// Doubly linked list of cells
 typedef struct celllist {
   int start;
   int size;
   cellnode_t cells[MAX_PROBLEM_SIZE * MAX_PROBLEM_SIZE];
 } celllist_t;
 
+// Puzzle constraint
 typedef struct constraint {
   type_t type;
   long value;
   celllist_t cellList;
 } constraint_t;
 
+// Individual cell in puzzle
 typedef struct cell {
   int value;
   int numPossibles;
