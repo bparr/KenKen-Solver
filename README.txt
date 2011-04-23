@@ -68,10 +68,26 @@ Note: The puzzle image creator requires Python Imaging Library (PIL), found at
 http://www.pythonware.com/products/pil/.
 
 
+Input files
+===========
+
+The input directory contains our generated input files, including both small
+test puzzles, and the five puzzles we used to measure speedups. These five
+files were originally named based on their original serial times, which have
+become outdated. However, the files in the blacklight/pople and jobs
+directories use these outdated filenames, so we decided not to update the
+filenames. In terms of the report, the filename mapping is:
+
+Puzzle 1 = 27minutes.txt
+Puzzle 2 = 33minutes.txt
+Puzzle 3 = 35minutes.txt
+Puzzle 4 = 39minutes.txt
+Puzzle 5 = 75minutes.txt
+
+
 Other directories
 =================
 
-input - puzzle files
 jobs - job scripts submitted on both blacklight and pople
 blacklight - data from blacklight supercomputer
 pople - data from pople supercomputer
