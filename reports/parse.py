@@ -39,8 +39,8 @@ for file in files:
   compTimes = []
   totalTimes = []
   fileStr = str(file)
-  parseFile("blacklight/serial" + fileStr, nodes, compTimes, totalTimes)
-  parseFile("blacklight/parallel" + fileStr, nodes, compTimes, totalTimes)
+  parseFile("../blacklight/serial" + fileStr, nodes, compTimes, totalTimes)
+  parseFile("../blacklight/parallel" + fileStr, nodes, compTimes, totalTimes)
   print "Blacklight " + fileStr
   printData(nodes, compTimes, totalTimes)
 
@@ -49,8 +49,8 @@ for file in files:
   compTimes = []
   totalTimes = []
   fileStr = str(file)
-  parseFile("pople/serial" + fileStr, nodes, compTimes, totalTimes)
-  parseFile("pople/parallel" + fileStr, nodes, compTimes, totalTimes)
+  parseFile("../pople/serial" + fileStr, nodes, compTimes, totalTimes)
+  parseFile("../pople/parallel" + fileStr, nodes, compTimes, totalTimes)
   print "Pople " + fileStr
   printData(nodes, compTimes, totalTimes)
 
